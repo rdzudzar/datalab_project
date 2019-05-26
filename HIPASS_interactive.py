@@ -72,7 +72,7 @@ from dl import queryClient as qc
 from dl import authClient as ac, queryClient as qc, storeClient as sc, helpers
 
 
-# In[3]:
+# In[63]:
 
 
 # Python 2/3 compatibility
@@ -88,7 +88,7 @@ token = ac.login('anonymous')
 #token = ac.login(input("Enter user name: "),getpass("Enter password: "))
 
 
-# In[4]:
+# In[64]:
 
 
 #FROM: DwarfGalaxyDESDR1_20171101.ipynb
@@ -130,7 +130,7 @@ def plot_images(images,geo=None,panelsize=4,bands=list('gri'),cmap=matplotlib.cm
             ax.yaxis.set_visible(False)
 
 
-# In[9]:
+# In[67]:
 
 
 #SIA
@@ -143,8 +143,8 @@ band = 'g'
 #rac=ra[7]
 #decc=dec[7]
 
-rac = df['_RAJ2000'][40]
-decc =  df['_DEJ2000'][40]
+rac = df['_RAJ2000'][59]
+decc =  df['_DEJ2000'][59]
 
 gimage = download_deepest_image(rac, decc, fov=0.25, band=band) # FOV in deg
 band = 'r'
@@ -154,7 +154,7 @@ iimage = download_deepest_image(rac, decc, fov=0.25, band=band) # FOV in deg
 images=[gimage,rimage,iimage]
 
 
-# In[10]:
+# In[68]:
 
 
 img = make_lupton_rgb(iimage, rimage, gimage, stretch=50)
@@ -178,19 +178,19 @@ ax.yaxis.set_visible(False)
 
 # # Scrape HIPASS data and make spectrum
 
-# In[2]:
+# In[139]:
 
 
 # Load galaxy properties from HIPASS data (https://ui.adsabs.harvard.edu/abs/2004MNRAS.350.1195M/abstract)
 from astropy.table import Table
 HIPASS_data = Table.read('HIPASS_catalog.fit')
-df = HIPASS_data.to_pandas()
+df_hipass = HIPASS_data.to_pandas()
 
 
-# In[3]:
+# In[140]:
 
 
-df.columns
+df_hipass
 
 
 # In[7]:
@@ -233,14 +233,14 @@ ax.yaxis.label.set_fontsize(12)
 # Invalid value encountered probably because of X limits are +/- Pi which are both singularities on the Mollweide projection.
 
 
-# In[4]:
+# In[141]:
 
 
-df = df[0:10]
+df = df_hipass[0:6]
 df
 
 
-# In[5]:
+# In[81]:
 
 
 import requests
@@ -251,7 +251,13 @@ from bs4 import BeautifulSoup
 import tqdm
 
 
-# In[6]:
+# In[142]:
+
+
+range(df.index[0], df.index[0]+len(df))
+
+
+# In[143]:
 
 
 # Edit url for x-th galaxy 
@@ -259,13 +265,16 @@ import tqdm
 # Add strings to url from the imported HIPASS dataframe
 
 all_s = [] # List of url-s
-for galaxy in range(len(df)):
+for galaxy in range(df.index[0], df.index[0]+len(df)):
     
     # Cube string can be example 9(99) from table, however, for url request needs to be written as 009(099), thus adding 00(0)
+    
     if len(str(df['cube'][galaxy]))==1:
         cube = ('00'+ str(df['cube'][galaxy]))
     elif len(str(df['cube'][galaxy]))==2:
         cube = ('0'+ str(df['cube'][galaxy]))
+        
+        
     else:
         cube = (str(df['cube'][galaxy]))
     
@@ -279,24 +288,24 @@ for galaxy in range(len(df)):
     print(s)
 
 
-# In[8]:
+# In[10]:
 
 
 #http://www.atnf.csiro.au/cgi-bin/multi/release/download.cgi?cubename=/var/www/vhosts/www.atnf.csiro.au/htdocs/research/multibeam/release/MULTI_3_HIDE/PUBLIC/H006_abcde_luther.FELO.imbin.vrd&hann=1&coord=15%3A48%3A13.1%2C-78%3A09%3A16&xrange=-1281%2C12741&xaxis=optical&datasource=hipass&type=ascii
 
 
-# In[7]:
+# In[144]:
 
 
 HIPASS_sources = []
 
-for galaxy_name in range(len(df)):
+for galaxy_name in range(df.index[0], df.index[0]+len(df)):
     gal_name = str(df['HIPASS'][galaxy_name]).strip('b\' ')
     HIPASS_sources.append('HIPASS'+gal_name)
 print(HIPASS_sources)
 
 
-# In[8]:
+# In[145]:
 
 
 # Go to url and get the spectrum data
@@ -354,7 +363,13 @@ for each_galaxy in all_s:
     #plt.show()
 
 
-# In[20]:
+# In[146]:
+
+
+print(range(len(Velocity)))
+
+
+# In[147]:
 
 
 # Plot the spectrum
@@ -388,13 +403,13 @@ from astroquery.vizier import Vizier
 
 # # Query images and show them
 
-# In[10]:
+# In[53]:
 
 
 from astroquery.skyview import SkyView
 
 
-# In[18]:
+# In[54]:
 
 
 SkyView.list_surveys() #list all available image data
@@ -406,7 +421,7 @@ SkyView.list_surveys() #list all available image data
 #                  'DSS2 IR'],
 
 
-# In[11]:
+# In[55]:
 
 
 from astropy import coordinates, units as u, wcs
@@ -415,7 +430,7 @@ from astroquery.vizier import Vizier
 import pylab as pl
 
 
-# In[12]:
+# In[56]:
 
 
 c = []
@@ -495,7 +510,7 @@ ax.imshow(image[0].data, cmap='gray_r', interpolation='none', origin='lower',
 #plt.imshow(rgb_img, origin='lower', interpolation='none')
 
 
-# In[14]:
+# In[57]:
 
 
 from urllib.error import HTTPError
@@ -543,7 +558,7 @@ for idx, each_galaxy in enumerate(HIPASS_sources):
 
 # # Bokeh - hover
 
-# In[15]:
+# In[58]:
 
 
 from bokeh.plotting import figure, output_file, show, ColumnDataSource, gridplot, save
@@ -551,13 +566,13 @@ from bokeh.models import HoverTool
 output_notebook()
 
 
-# In[16]:
+# In[59]:
 
 
 print(df['HIPASS'])
 
 
-# In[21]:
+# In[60]:
 
 
 import glob
@@ -568,7 +583,7 @@ List_of_spectra = glob.glob("./HIPASS_spectra/*.png")
 print(List_of_spectra)
 
 
-# In[22]:
+# In[61]:
 
 
 
