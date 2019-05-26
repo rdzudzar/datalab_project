@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[71]:
+# In[1]:
 
 
 __author__ = 'Robert Dzudzar <rdzudzar@swin.edu.au>'
@@ -39,7 +39,7 @@ __keywords__ = ['Neutral Hydrogen', 'Galaxies','bokeh','Spectra']
 # <a class="anchor" id="import"></a>
 # # Imports and setup
 
-# In[9]:
+# In[2]:
 
 
 # std lib
@@ -72,7 +72,7 @@ from dl import queryClient as qc
 from dl import authClient as ac, queryClient as qc, storeClient as sc, helpers
 
 
-# In[73]:
+# In[3]:
 
 
 # Python 2/3 compatibility
@@ -88,7 +88,7 @@ token = ac.login('anonymous')
 #token = ac.login(input("Enter user name: "),getpass("Enter password: "))
 
 
-# In[74]:
+# In[4]:
 
 
 #FROM: DwarfGalaxyDESDR1_20171101.ipynb
@@ -130,14 +130,7 @@ def plot_images(images,geo=None,panelsize=4,bands=list('gri'),cmap=matplotlib.cm
             ax.yaxis.set_visible(False)
 
 
-# In[75]:
-
-
-print(df['_RAJ2000'][40])
-print(df['_DEJ2000'][40])
-
-
-# In[76]:
+# In[9]:
 
 
 #SIA
@@ -161,7 +154,7 @@ iimage = download_deepest_image(rac, decc, fov=0.25, band=band) # FOV in deg
 images=[gimage,rimage,iimage]
 
 
-# In[77]:
+# In[10]:
 
 
 img = make_lupton_rgb(iimage, rimage, gimage, stretch=50)
@@ -174,7 +167,7 @@ ax.xaxis.set_visible(False)
 ax.yaxis.set_visible(False)
 
 
-# In[78]:
+# In[ ]:
 
 
 # IMAGES
@@ -185,7 +178,7 @@ ax.yaxis.set_visible(False)
 
 # # Scrape HIPASS data and make spectrum
 
-# In[6]:
+# In[8]:
 
 
 # Load galaxy properties from HIPASS data (https://ui.adsabs.harvard.edu/abs/2004MNRAS.350.1195M/abstract)
@@ -194,19 +187,19 @@ HIPASS_data = Table.read('HIPASS_catalog.fit')
 df = HIPASS_data.to_pandas()
 
 
-# In[7]:
+# In[11]:
 
 
 df.columns
 
 
-# In[81]:
+# In[ ]:
 
 
 #print(df['_RAJ2000'])
 
 
-# In[82]:
+# In[ ]:
 
 
 #fig = plt.figure(figsize=(10,10)) 
@@ -219,7 +212,7 @@ df.columns
 #x.yaxis.label.set_fontsize(12)
 
 
-# In[10]:
+# In[12]:
 
 
 # Plot HIPASS survey
@@ -240,14 +233,14 @@ ax.yaxis.label.set_fontsize(12)
 # Invalid value encountered probably because of X limits are +/- Pi which are both singularities on the Mollweide projection.
 
 
-# In[11]:
+# In[13]:
 
 
 df = df[0:6]
 df
 
 
-# In[12]:
+# In[14]:
 
 
 import requests
@@ -258,7 +251,7 @@ from bs4 import BeautifulSoup
 import tqdm
 
 
-# In[13]:
+# In[15]:
 
 
 # Edit url for x-th galaxy 
@@ -286,13 +279,13 @@ for galaxy in range(len(df)):
     print(s)
 
 
-# In[14]:
+# In[16]:
 
 
 #http://www.atnf.csiro.au/cgi-bin/multi/release/download.cgi?cubename=/var/www/vhosts/www.atnf.csiro.au/htdocs/research/multibeam/release/MULTI_3_HIDE/PUBLIC/H006_abcde_luther.FELO.imbin.vrd&hann=1&coord=15%3A48%3A13.1%2C-78%3A09%3A16&xrange=-1281%2C12741&xaxis=optical&datasource=hipass&type=ascii
 
 
-# In[15]:
+# In[17]:
 
 
 HIPASS_sources = []
@@ -303,7 +296,7 @@ for galaxy_name in range(len(df)):
 print(HIPASS_sources)
 
 
-# In[16]:
+# In[18]:
 
 
 # Go to url and get the spectrum data
@@ -361,7 +354,7 @@ for each_galaxy in all_s:
     #plt.show()
 
 
-# In[17]:
+# In[19]:
 
 
 # Plot the spectrum
@@ -384,7 +377,7 @@ for i in range(len(Velocity)):
     plt.show()
 
 
-# In[19]:
+# In[20]:
 
 
 from astroquery.vizier import Vizier
@@ -392,13 +385,13 @@ from astroquery.vizier import Vizier
 
 # # Query images and show them
 
-# In[91]:
+# In[21]:
 
 
 from astroquery.skyview import SkyView
 
 
-# In[92]:
+# In[22]:
 
 
 SkyView.list_surveys() #list all available image data
@@ -410,7 +403,7 @@ SkyView.list_surveys() #list all available image data
 #                  'DSS2 IR'],
 
 
-# In[1]:
+# In[23]:
 
 
 from astropy import coordinates, units as u, wcs
@@ -419,7 +412,7 @@ from astroquery.vizier import Vizier
 import pylab as pl
 
 
-# In[28]:
+# In[24]:
 
 
 c = []
@@ -431,7 +424,7 @@ for each_galaxy in HIPASS_sources:
     print(center)
 
 
-# In[34]:
+# In[25]:
 
 
 # Get image from the SkyView based on the name; radius is matched to HIPASS primary beam
@@ -453,37 +446,7 @@ ax.imshow(image[0].data, cmap='gray_r', interpolation='none', origin='lower',
           norm=pl.matplotlib.colors.LogNorm())
 
 
-# In[37]:
-
-
-
-for each_galaxy in HIPASS_sources:
-    
-
-    center = coordinates.SkyCoord.from_name(each_galaxy)
-    
-    # Get image from the SkyView based on the name; radius is matched to HIPASS primary beam
-    images = SkyView.get_images(position=center, pixels=[1000,1000], survey='DSS', radius=15*u.arcmin)
-    
-    image = images[0]
-    
-    # 'imgage' is now a fits.HDUList object; the 0th entry is the image
-    mywcs = wcs.WCS(image[0].header)
-    
-    fig = pl.figure(figsize=(8,8))
-    fig.clf() # just in case one was open before
-    # use astropy's wcsaxes tool to create an RA/Dec image
-    ax = fig.add_axes([0.15, 0.1, 0.8, 0.8], projection=mywcs)
-    ax.set_xlabel("RA")
-    ax.set_ylabel("Dec")
-    
-    ax.imshow(image[0].data, cmap='gray_r', interpolation='none', origin='lower',
-              norm=pl.matplotlib.colors.LogNorm())
-    
-    #ax.axis([100, 200, 100, 200])
-
-
-# In[23]:
+# In[26]:
 
 
 #Example is downloading a LOT of files!!
@@ -529,7 +492,7 @@ for each_galaxy in HIPASS_sources:
 #plt.imshow(rgb_img, origin='lower', interpolation='none')
 
 
-# In[74]:
+# In[27]:
 
 
 from urllib.error import HTTPError
@@ -566,29 +529,118 @@ for each_galaxy in HIPASS_sources:
     #ax.axis([100, 200, 100, 200])
 
 
-# In[45]:
+# # Bokeh - hover
+
+# In[28]:
 
 
-for each_galaxy in HIPASS_sources:
+from bokeh.plotting import figure, output_file, show, ColumnDataSource, gridplot, save
+from bokeh.models import HoverTool
+output_notebook()
 
 
-    center = coordinates.SkyCoord.from_name(each_galaxy)
-    
-    # Get image from the SkyView based on the name; radius is matched to HIPASS primary beam
-    images = SkyView.get_images(position=center, pixels=[1000,1000], survey='DSS1 Blue', radius=15*u.arcmin)
-    
-    image = images[0]
-    
-    # 'imgage' is now a fits.HDUList object; the 0th entry is the image
-    mywcs = wcs.WCS(image[0].header)
-    
-    fig = pl.figure(figsize=(8,8))
-    fig.clf() # just in case one was open before
-    # use astropy's wcsaxes tool to create an RA/Dec image
-    ax = fig.add_axes([0.15, 0.1, 0.8, 0.8], projection=mywcs)
-    ax.set_xlabel("RA")
-    ax.set_ylabel("Dec")
-    
-    ax.imshow(image[0].data, cmap='gray_r', interpolation='none', origin='lower',
-              norm=pl.matplotlib.colors.LogNorm())
+# In[29]:
+
+
+print(len(df['HIPASS']))
+
+
+# In[30]:
+
+
+
+source = ColumnDataSource(
+        data=dict(
+            x=df['RVmom'],
+            y=df['Sint'], 
+           # desc=df['HIPASS'] ,))
+            imgs=[
+                'http://cseligman.com/text/atlas/hcg01wide.jpg',
+                'http://cseligman.com/text/atlas/hcg02wide.jpg',
+                'http://cseligman.com/text/atlas/hcg03wide.jpg',
+                'http://cseligman.com/text/atlas/hcg05wide.jpg',
+                'http://cseligman.com/text/atlas/hcg06wide.jpg',
+                'http://cseligman.com/text/atlas/hcg07wide.jpg'   ],))
+
+hover = HoverTool( tooltips="""
+    <div>
+        <div>
+            <img
+                src="@imgs" height="300" alt="@imgs" width="300"
+                style="float: left; margin: 0px 0px 10px 0px;"
+                border="2"
+            ></img>
+        </div>
+            <span style="font-size: 17px; font-weight: bold;">@desc</span>
+        </div>
+        <div>
+            <span style="font-size: 15px;">Location</span>
+            <span style="font-size: 10px; color: #696;">($x, $y)</span>
+        </div>
+    </div>
+    """
+)
+
+
+p = figure(plot_width=500, plot_height=500, tools=[hover],
+           title="Mouse over the dots")
+
+
+p.circle('x', 'y', size=10, color='black', source=source)
+#p.line([8.5,9,10,11], [8.5,9,10,11], line_width=1, line_color='blue')
+
+#p.yaxis.axis_label = 'HI mass observed [Mo]'
+#p.xaxis.axis_label = 'HI mass expected [Mo]'
+
+show(p)
+
+
+# In[31]:
+
+
+
+source = ColumnDataSource(
+        data=dict(
+            x=df['RVmom'],
+            y=df['Sint'], 
+           # desc=df['HIPASS'] ,))
+            imgs=[
+                'M81_SDSS_cutout.jpg',
+                'http://cseligman.com/text/atlas/hcg02wide.jpg',
+                'http://cseligman.com/text/atlas/hcg03wide.jpg',
+                'http://cseligman.com/text/atlas/hcg05wide.jpg',
+                'http://cseligman.com/text/atlas/hcg06wide.jpg',
+                'http://cseligman.com/text/atlas/hcg07wide.jpg'   ],))
+
+hover = HoverTool( tooltips="""
+    <div>
+        <div>
+            <img
+                src="@imgs" height="300" alt="@imgs" width="300"
+                style="float: left; margin: 0px 0px 10px 0px;"
+                border="2"
+            ></img>
+        </div>
+            <span style="font-size: 17px; font-weight: bold;">@desc</span>
+        </div>
+        <div>
+            <span style="font-size: 15px;">Location</span>
+            <span style="font-size: 10px; color: #696;">($x, $y)</span>
+        </div>
+    </div>
+    """
+)
+
+
+p = figure(plot_width=500, plot_height=500, tools=[hover],
+           title="Mouse over the dots")
+
+
+p.circle('x', 'y', size=10, color='black', source=source)
+#p.line([8.5,9,10,11], [8.5,9,10,11], line_width=1, line_color='blue')
+
+#p.yaxis.axis_label = 'HI mass observed [Mo]'
+#p.xaxis.axis_label = 'HI mass expected [Mo]'
+
+show(p)
 
