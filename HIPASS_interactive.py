@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[524]:
+# In[71]:
 
 
 __author__ = 'Robert Dzudzar <rdzudzar@swin.edu.au>'
@@ -39,7 +39,7 @@ __keywords__ = ['Neutral Hydrogen', 'Galaxies','bokeh','Spectra']
 # <a class="anchor" id="import"></a>
 # # Imports and setup
 
-# In[42]:
+# In[9]:
 
 
 # std lib
@@ -72,7 +72,7 @@ from dl import queryClient as qc
 from dl import authClient as ac, queryClient as qc, storeClient as sc, helpers
 
 
-# In[43]:
+# In[73]:
 
 
 # Python 2/3 compatibility
@@ -88,7 +88,7 @@ token = ac.login('anonymous')
 #token = ac.login(input("Enter user name: "),getpass("Enter password: "))
 
 
-# In[44]:
+# In[74]:
 
 
 #FROM: DwarfGalaxyDESDR1_20171101.ipynb
@@ -130,14 +130,14 @@ def plot_images(images,geo=None,panelsize=4,bands=list('gri'),cmap=matplotlib.cm
             ax.yaxis.set_visible(False)
 
 
-# In[65]:
+# In[75]:
 
 
 print(df['_RAJ2000'][40])
 print(df['_DEJ2000'][40])
 
 
-# In[63]:
+# In[76]:
 
 
 #SIA
@@ -161,7 +161,7 @@ iimage = download_deepest_image(rac, decc, fov=0.25, band=band) # FOV in deg
 images=[gimage,rimage,iimage]
 
 
-# In[64]:
+# In[77]:
 
 
 img = make_lupton_rgb(iimage, rimage, gimage, stretch=50)
@@ -174,7 +174,7 @@ ax.xaxis.set_visible(False)
 ax.yaxis.set_visible(False)
 
 
-# In[529]:
+# In[78]:
 
 
 # IMAGES
@@ -185,7 +185,7 @@ ax.yaxis.set_visible(False)
 
 # # Scrape HIPASS data and make spectrum
 
-# In[46]:
+# In[6]:
 
 
 # Load galaxy properties from HIPASS data (https://ui.adsabs.harvard.edu/abs/2004MNRAS.350.1195M/abstract)
@@ -194,19 +194,19 @@ HIPASS_data = Table.read('HIPASS_catalog.fit')
 df = HIPASS_data.to_pandas()
 
 
-# In[47]:
+# In[7]:
 
 
 df.columns
 
 
-# In[645]:
+# In[81]:
 
 
 #print(df['_RAJ2000'])
 
 
-# In[684]:
+# In[82]:
 
 
 #fig = plt.figure(figsize=(10,10)) 
@@ -219,7 +219,7 @@ df.columns
 #x.yaxis.label.set_fontsize(12)
 
 
-# In[687]:
+# In[10]:
 
 
 # Plot HIPASS survey
@@ -240,14 +240,14 @@ ax.yaxis.label.set_fontsize(12)
 # Invalid value encountered probably because of X limits are +/- Pi which are both singularities on the Mollweide projection.
 
 
-# In[688]:
+# In[11]:
 
 
 df = df[0:6]
 df
 
 
-# In[48]:
+# In[12]:
 
 
 import requests
@@ -258,7 +258,7 @@ from bs4 import BeautifulSoup
 import tqdm
 
 
-# In[691]:
+# In[13]:
 
 
 # Edit url for x-th galaxy 
@@ -286,24 +286,24 @@ for galaxy in range(len(df)):
     print(s)
 
 
-# In[612]:
+# In[14]:
 
 
 #http://www.atnf.csiro.au/cgi-bin/multi/release/download.cgi?cubename=/var/www/vhosts/www.atnf.csiro.au/htdocs/research/multibeam/release/MULTI_3_HIDE/PUBLIC/H006_abcde_luther.FELO.imbin.vrd&hann=1&coord=15%3A48%3A13.1%2C-78%3A09%3A16&xrange=-1281%2C12741&xaxis=optical&datasource=hipass&type=ascii
 
 
-# In[60]:
+# In[15]:
 
 
-# SKYMAPPER
+HIPASS_sources = []
 
-image = 'http://api.skymapper.nci.org.au/aus/siap/dr2/get_image?IMAGE=20140425124821-10&SIZE=0.0833&POS=189.99763,-11.62305&FORMAT=png'
-import IPython
-url = image
-IPython.display.Image(url, width = 250)
+for galaxy_name in range(len(df)):
+    gal_name = str(df['HIPASS'][galaxy_name]).strip('b\' ')
+    HIPASS_sources.append('HIPASS'+gal_name)
+print(HIPASS_sources)
 
 
-# In[618]:
+# In[16]:
 
 
 # Go to url and get the spectrum data
@@ -361,7 +361,7 @@ for each_galaxy in all_s:
     #plt.show()
 
 
-# In[622]:
+# In[17]:
 
 
 # Plot the spectrum
@@ -387,6 +387,64 @@ for i in range(len(Velocity)):
 # In[19]:
 
 
-
 from astroquery.vizier import Vizier
+
+
+# # Query images and show them
+
+# In[91]:
+
+
+from astroquery.skyview import SkyView
+
+
+# In[92]:
+
+
+SkyView.list_surveys()
+#'Optical:DSS': ['DSS',
+#                  'DSS1 Blue',
+#                  'DSS1 Red',
+#                  'DSS2 Red',
+#                  'DSS2 Blue',
+#                  'DSS2 IR'],
+
+
+# In[1]:
+
+
+from astropy import coordinates, units as u, wcs
+from astroquery.skyview import SkyView
+from astroquery.vizier import Vizier
+import pylab as pl
+
+
+# In[20]:
+
+
+
+for each_galaxy in HIPASS_sources:
+    
+
+    center = coordinates.SkyCoord.from_name(each_galaxy)
+    
+    # Get image from the SkyView based on the name; radius is matched to HIPASS primary beam
+    images = SkyView.get_images(position=center, pixels=[1000,1000], survey='DSS1 Blue', radius=15*u.arcmin)
+    
+    image = images[0]
+    
+    # 'imgage' is now a fits.HDUList object; the 0th entry is the image
+    mywcs = wcs.WCS(image[0].header)
+    
+    fig = pl.figure(figsize=(8,8))
+    fig.clf() # just in case one was open before
+    # use astropy's wcsaxes tool to create an RA/Dec image
+    ax = fig.add_axes([0.15, 0.1, 0.8, 0.8], projection=mywcs)
+    ax.set_xlabel("RA")
+    ax.set_ylabel("Dec")
+    
+    ax.imshow(image[0].data, cmap='gray_r', interpolation='none', origin='lower',
+              norm=pl.matplotlib.colors.LogNorm())
+    
+    #ax.axis([100, 200, 100, 200])
 
