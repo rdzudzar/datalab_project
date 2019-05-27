@@ -4,13 +4,13 @@
 # In[1]:
 
 
-__author__ = 'Robert Dzudzar <rdzudzar@swin.edu.au>'
+__author__ = 'Robert Dzudzar <robertdzudzar@gmail.com>, <rdzudzar@swin.edu.au>'
 __version__ = '20190511' # yyyymmdd; version datestamp of this notebook
 #__datasets__ = ['des_dr1']
 __keywords__ = ['Neutral Hydrogen', 'Galaxies','bokeh','Spectra']
 
 
-# # Optical counterparts for the HIPASS survey
+# # Interactively examining the HI Parkes All Sky Survey 
 # *Robert Dzudzar*
 
 # ### Table of contents
@@ -23,10 +23,10 @@ __keywords__ = ['Neutral Hydrogen', 'Galaxies','bokeh','Spectra']
 
 # <a class="anchor" id="goals"></a>
 # # Goals
-# This notebook is for interactive exploration of the multiwavelength data, in particular: combining radio data (measured properties and HI emission line spectra) from the HI Parks All Sky Survey with the optical images. 
+# This notebook is for interactive exploration of the multiwavelength data, in particular: a combination of the radio data (measured properties and HI emission line spectra) from the HI Parks All Sky Survey and the optical data. 
 
 # # Summary
-# We utilize data from the HI Parks All Sky Survey (HIPASS) presented in ...CITE... and publicly awailable at ...CITE... HIPASS data is presented in form of numerical properties of the galaxies and their HI emission line spectra. We combine HIPASS dataset with the optical galaxy images in an interactive way, therefore, explore dataset with visualization approach. 
+# We utilize data from the HI Parks All Sky Survey (HIPASS) presented in https://ui.adsabs.harvard.edu/?#abs/2004MNRAS.350.1195M and publicly awailable at http://www.atnf.csiro.au/research/multibeam/release/. The HIPASS data are presented in the form of numerical properties of the sources and their HI emission line spectra. We combine the HI spectra from the HIPASS with their optical images in an interactive environment, therefore, explore dataset with visualization approach. 
 
 # <a class="anchor" id="attribution"></a>
 # # Disclaimer & attribution
@@ -39,7 +39,7 @@ __keywords__ = ['Neutral Hydrogen', 'Galaxies','bokeh','Spectra']
 # <a class="anchor" id="import"></a>
 # # Imports and setup
 
-# In[1]:
+# In[148]:
 
 
 # std lib
@@ -58,13 +58,11 @@ from astropy.visualization import make_lupton_rgb
 import pandas as pd
 import html5lib
 
-#bokeh
+ # bokeh
 from bokeh.io import output_notebook
-from bokeh.plotting import figure
-output_notebook()
-
 from bokeh.plotting import figure, output_file, show, ColumnDataSource, gridplot, save
 from bokeh.models import HoverTool
+output_notebook()
 
 # Data Lab
 from dl import queryClient as qc
@@ -176,9 +174,9 @@ ax.yaxis.set_visible(False)
 #https://github.com/cds-astro
 
 
-# # Scrape HIPASS data and make spectrum
+# # Import HIPASS data
 
-# In[139]:
+# In[149]:
 
 
 # Load galaxy properties from HIPASS data (https://ui.adsabs.harvard.edu/abs/2004MNRAS.350.1195M/abstract)
@@ -187,9 +185,10 @@ HIPASS_data = Table.read('HIPASS_catalog.fit')
 df_hipass = HIPASS_data.to_pandas()
 
 
-# In[140]:
+# In[150]:
 
 
+# Dataframe
 df_hipass
 
 
@@ -212,17 +211,21 @@ df_hipass
 #x.yaxis.label.set_fontsize(12)
 
 
-# In[4]:
+# ## Plot the Sky coverage of the HIPASS survey
+
+# In[152]:
 
 
 # Plot HIPASS survey
 
 fig = plt.figure(figsize=(10,10)) 
-ax = fig.add_subplot(111, projection="mollweide")
-im = ax.scatter(np.radians(df['_RAJ2000']-180), np.radians(df['_DEJ2000']), c=df['RVmom'], cmap='viridis', s=20)
-
+ax = fig.add_subplot(111, projection="mollweide") # Using mollweide projection
+# Converting RA and DEC from deg to radians
+im = ax.scatter(np.radians(df_hipass['_RAJ2000']-180), np.radians(df_hipass['_DEJ2000']), c=df_hipass['RVmom'], cmap='viridis', s=20)
+# Adding colorbar for the sources, based on their Velocity
 cb = plt.colorbar(im, orientation = 'horizontal', shrink = 0.8)
-cb.set_label('RVmom') #Flux-weighted mean velocity of profile clipped at RVlo and RVhi 
+# RVmom ==> Flux-weighted mean velocity of profile clipped at RVlo and RVhi (explained in the online HIPASS table)
+cb.set_label(r'RVmom [km s$^{-1}$]') 
 
 
 ax.set_xlabel(r'$\mathrm{RA[\degree]}$')
@@ -230,54 +233,51 @@ ax.xaxis.label.set_fontsize(12)
 ax.set_ylabel(r'$\mathrm{Dec[\degree]}$')
 ax.yaxis.label.set_fontsize(12)
 
-# Invalid value encountered probably because of X limits are +/- Pi which are both singularities on the Mollweide projection.
+# Invalid value encountered probably because of x limits are +/- Pi which are both singularities on the Mollweide projection.
 
 
-# In[141]:
+# In[153]:
 
 
+# Small sub-sample of the HIPASS data
 df = df_hipass[0:6]
 df
 
 
-# In[81]:
+# In[154]:
 
 
 import requests
-import pandas as pd
 #mport json
 #rom pandas.io.json import json_normalize
 from bs4 import BeautifulSoup
 import tqdm
 
 
-# In[142]:
+# ## Scraping url-s where the data of the HIPASS spectra is storred
+
+# In[157]:
 
 
-range(df.index[0], df.index[0]+len(df))
+# Edit url for each galaxy in HIPASS: for making url-s we need: RA, DEC, and a number of the cube from where data was extracted
+# Needed data are provided in the HIPASS table: df['RAJ2000'], df['DEJ2000'] and df['cube']
 
-
-# In[143]:
-
-
-# Edit url for x-th galaxy 
-
-# Add strings to url from the imported HIPASS dataframe
-
-all_s = [] # List of url-s
+# List of url-s
+all_s = [] 
+# Go through each galaxy from the dataframe
 for galaxy in range(df.index[0], df.index[0]+len(df)):
     
-    # Cube string can be example 9(99) from table, however, for url request needs to be written as 009(099), thus adding 00(0)
+    # Cube string can be example 9(99) from table, however, for url request they need to be written as 009(099)
+    # We check the cube number length and add 00(0) if needed.
     
     if len(str(df['cube'][galaxy]))==1:
         cube = ('00'+ str(df['cube'][galaxy]))
     elif len(str(df['cube'][galaxy]))==2:
         cube = ('0'+ str(df['cube'][galaxy]))
-        
-        
     else:
         cube = (str(df['cube'][galaxy]))
     
+    # We combine all aquired strings into the uls string which is constant and append it to `all_s`
     s = ('http://www.atnf.csiro.au/cgi-bin/multi/release/download.cgi?cubename=/var/www/vhosts/www.atnf.csiro.au/'+
      'htdocs/research/multibeam/release/MULTI_3_HIDE/PUBLIC/H'+
      '{0}_abcde_luther.FELO.imbin.vrd&hann=1&coord={1}%3A{2}%3A{3}%2C{4}%3A{5}%3A{6}&xrange=-1281%2C12741&xaxis=optical&datasource=hipass&type=ascii'.format( 
@@ -285,6 +285,8 @@ for galaxy in range(df.index[0], df.index[0]+len(df)):
          str(df['RAJ2000'][galaxy])[2:4], str(df['RAJ2000'][galaxy])[5:7], 
          str(df['RAJ2000'][galaxy])[8:10], str(df['DEJ2000'][galaxy])[2:5], str(df['DEJ2000'][galaxy])[6:8], str(df['DEJ2000'][galaxy])[9:11] ) )
     all_s.append(s)
+    
+    # Print each created url, can open them and see how the data looks like 
     print(s)
 
 
@@ -294,9 +296,13 @@ for galaxy in range(df.index[0], df.index[0]+len(df)):
 #http://www.atnf.csiro.au/cgi-bin/multi/release/download.cgi?cubename=/var/www/vhosts/www.atnf.csiro.au/htdocs/research/multibeam/release/MULTI_3_HIDE/PUBLIC/H006_abcde_luther.FELO.imbin.vrd&hann=1&coord=15%3A48%3A13.1%2C-78%3A09%3A16&xrange=-1281%2C12741&xaxis=optical&datasource=hipass&type=ascii
 
 
-# In[144]:
+# In[158]:
 
 
+# Extract the HIPASS source names from the table; String manipulation is needed to strip certain characters from name 
+# Also, each source has sting `HIPASS` in front of its table name, so we add that
+
+# Creating HIPASS sources name list
 HIPASS_sources = []
 
 for galaxy_name in range(df.index[0], df.index[0]+len(df)):
@@ -305,17 +311,21 @@ for galaxy_name in range(df.index[0], df.index[0]+len(df)):
 print(HIPASS_sources)
 
 
-# In[145]:
+# In[159]:
 
 
-# Go to url and get the spectrum data
+# We want to go to each url and extract only the spectra data
+# From each url we need Intensity, Velocity and Channel information
+
 #res = requests.get("http://www.atnf.csiro.au/cgi-bin/multi/release/download.cgi?cubename=/var/www/vhosts/www.atnf.csiro.au/htdocs/research/multibeam/release/MULTI_3_HIDE/PUBLIC/H006_abcde_luther.FELO.imbin.vrd&hann=1&coord=15%3A48%3A13.1%2C-78%3A09%3A16&xrange=2100%2C3100&xaxis=optical&datasource=hipass&type=ascii")
 #res = requests.get("http://www.atnf.csiro.au/cgi-bin/multi/release/download.cgi?cubename=/var/www/vhosts/www.atnf.csiro.au/htdocs/research/multibeam/release/MULTI_3_HIDE/PUBLIC/H006_abcde_luther.FELO.imbin.vrd&hann=1&coord=15%3A48%3A13.1%2C-78%3A09%3A16&xrange=-1281%2C12741&xaxis=optical&datasource=hipass&type=ascii")
 
-
+#Storring values
 Intensity = []
 Velocity = []
 Channel = []
+
+# Going through each url, reading it with the BeautifulSoup and manipulating to get needed data
 count = -1
 for each_galaxy in all_s:    
     count += 1
@@ -323,22 +333,26 @@ for each_galaxy in all_s:
     soup = BeautifulSoup(res.content,'lxml')
     
     # Take a part of the url page where the spectral information is held
-    start_df = str(soup)[1510:]  #starting number information
-    for_table = start_df[:50176] #end reading before (</p></body></html>)
+    # This requires skipping first 1510 characters and everything after 50176 character from the url 
+    # These numbers are always the same for the HIPASS database
+    
+    start_df = str(soup)[1510:]  # Starting character 
+    for_table = start_df[:50176] # Remove everything after this character (</p></body></html>)
     
     # Split data into rows with separator '\n' 
     a = for_table.rstrip().split('\n')
     
-    # Go line by line and extract string which are actually numbers (3 columns)
+    # Go line by line and extract string which are actually numbers (3 columns: Channel, Velocity and Intensity)
     Chan = []
     Vel = []
     Int = []
+    # We know where the required informations are storred so we are just extracting certain characters
     for i in a:
         Chan.append(i[1:12])
         Vel.append(i[17:33])
         Int.append(i[36:49])
         
-    # Convert string into floats
+    # Convert string into floats and save them for each galaxy
     I = [float(i) for i in Int]
     C = [float(i) for i in Chan]
     V = [float(i) for i in Vel]
@@ -346,46 +360,35 @@ for each_galaxy in all_s:
     Velocity.append(V)
     Channel.append(C)
     
-    #fig = plt.figure(figsize=(8,7))                                                               
-    #ax = fig.add_subplot(1,1,1)
-    #plt.plot(V, I, 'k', linewidth = 1) # Plot spectrum
-    #plt.xlim(df['RV1'][count]-500, df['RV2'][count]+500) # Read in from table
-    
-    #plt.axvline(df['RVsp'][count]) # Add peak line
-    #ax.axvspan(df['RV1'][count], df['RV2'][count], ymin=0, ymax=1, alpha=0.5, color='lightgrey') # Shade spectra region
-    
-    #plt.ylim(-0.05, 0.1) #read in from table
-    #plt.ylabel('Flux density [Jy beam$^{-1}$]', fontsize = 15)
-    #plt.xlabel('Optical Velocity [km s$^{-1}$]', fontsize = 15)
-    
-    #ax.get_yaxis().set_tick_params(which = 'both', direction='in', right = True, size = 8)
-    #ax.get_xaxis().set_tick_params(which = 'both', direction='in', top = True, size = 8)
-    #plt.show()
 
 
-# In[146]:
+# ## Plot the HI spectra for each source
 
-
-print(range(len(Velocity)))
-
-
-# In[147]:
+# In[160]:
 
 
 # Plot the spectrum
+# For each source that was extracted
 
 for idx, i in enumerate(range(len(Velocity))):
 #for i in range(len(Velocity)):
     
     fig = plt.figure(figsize=(8,7))                                                               
     ax = fig.add_subplot(1,1,1)
-    plt.plot(Velocity[i], Intensity[i], 'k', linewidth = 1) # Plot spectrum
-    plt.xlim(df['RV1'][i]-500, df['RV2'][i]+500) # Read in from table
     
-    #plt.axvline(df['RVsp'][count]) # Add peak line
+    # Plotting Velocity and HI intensity
+    plt.plot(Velocity[i], Intensity[i], 'k', linewidth = 1) 
+    # Read the position where HI is detected (information from the table)
+    # Adding by default velocity +- from the center of the detected source velocity
+    # Range can be arbitrary as the velocity information for each source is in range from around -1280 to around 12726 km/s
+    plt.xlim(df['RV1'][i]-500, df['RV2'][i]+500) 
+    
+    # plt.axvline(df['RVsp'][count]) # Add peak line
+    # Adding span in which HI spectrum was integrated to get the flux values
     ax.axvspan(df['RV1'][i], df['RV2'][i], ymin=0, ymax=1, alpha=0.5, color='lightgrey') # Shade spectra region
     
-    plt.ylim(-0.05, 0.1) #read in from table
+    # Add limits to plot, labels, ticks and save figure
+    plt.ylim(-0.05, 0.1)
     plt.ylabel('Flux density [Jy beam$^{-1}$]', fontsize = 15)
     plt.xlabel('Optical Velocity [km s$^{-1}$]', fontsize = 15)
     
@@ -401,18 +404,22 @@ for idx, i in enumerate(range(len(Velocity))):
 from astroquery.vizier import Vizier
 
 
-# # Query images and show them
+# # Query (optical) images of the HIPASS sources
 
 # In[53]:
 
 
+# Using SkyView to get the DSS images of the sources
 from astroquery.skyview import SkyView
 
 
-# In[54]:
+# In[161]:
 
 
-SkyView.list_surveys() #list all available image data
+#list all available image data which can be obtained from SkyView
+SkyView.list_surveys() 
+
+# For DSS: 
 #'Optical:DSS': ['DSS',
 #                  'DSS1 Blue',
 #                  'DSS1 Red',
@@ -421,7 +428,7 @@ SkyView.list_surveys() #list all available image data
 #                  'DSS2 IR'],
 
 
-# In[55]:
+# In[162]:
 
 
 from astropy import coordinates, units as u, wcs
@@ -430,38 +437,41 @@ from astroquery.vizier import Vizier
 import pylab as pl
 
 
-# In[56]:
+# In[163]:
 
+
+# To query Sky position (images) of sources, we need central position of each detection in HIPASS so we extract them using SkyCoord
 
 c = []
 for each_galaxy in HIPASS_sources:
-    
-
     center = coordinates.SkyCoord.from_name(each_galaxy)
     c.append(center)
-    print(center)
+    #print(center)
 
 
-# In[13]:
+# In[165]:
 
 
-# Get image from the SkyView based on the name; radius is matched to HIPASS primary beam
+# Get image from the SkyView based on the position
+# Radius of the extracted images is matched to the HIPASS primary beam (~15 arcmin)
 images = SkyView.get_images(position=c[2], pixels=[1000,1000], survey='DSS', radius=15*u.arcmin)
-
 image = images[0]
 
 # 'imgage' is now a fits.HDUList object; the 0th entry is the image
 mywcs = wcs.WCS(image[0].header)
 
+# Plot the image
 fig = pl.figure(figsize=(8,8))
 fig.clf() # just in case one was open before
-# use astropy's wcsaxes tool to create an RA/Dec image
+
+# Use astropy's wcsaxes tool to create an RA/Dec image with coordinates on the axis
 ax = fig.add_axes([0.15, 0.1, 0.8, 0.8], projection=mywcs)
 ax.set_xlabel("RA")
 ax.set_ylabel("Dec")
 
+# Show image as grayscale
 ax.imshow(image[0].data, cmap='gray_r', interpolation='none', origin='lower',
-          norm=pl.matplotlib.colors.LogNorm())
+          norm=pl.matplotlib.colors.LogNorm());
 
 
 # In[19]:
@@ -510,18 +520,25 @@ ax.imshow(image[0].data, cmap='gray_r', interpolation='none', origin='lower',
 #plt.imshow(rgb_img, origin='lower', interpolation='none')
 
 
-# In[57]:
+# In[166]:
 
 
 from urllib.error import HTTPError
 
+# Get image from the SkyView based on the position
+# Radius of the extracted images is matched to the HIPASS primary beam (~15 arcmin)
+# Attention --- Not all HIPASS sources are clearly identified, since the beam is 15 arcmin there are confused sources - thus
+# possible optical counterpart will be off center in the optical image
+
 for idx, each_galaxy in enumerate(HIPASS_sources):
 #for each_galaxy in HIPASS_sources:
-    try:
 
+# Encountering  HTTPError when the position of the source is not in the image database, then it will be skipped and user will be notified   
+    try:
+        # Get coordinates
         center = coordinates.SkyCoord.from_name(each_galaxy)
         
-        # Get image from the SkyView based on the name; radius is matched to HIPASS primary beam
+        # Get image from the SkyView based on coordinates; radius is matched to HIPASS primary beam
         Survey = 'DSS'
         images = SkyView.get_images(position=center, pixels=[1000,1000], survey=Survey, radius=5*u.arcmin)
         
@@ -532,12 +549,14 @@ for idx, each_galaxy in enumerate(HIPASS_sources):
         
         fig = pl.figure(figsize=(8,8))
         fig.clf() # just in case one was open before
-        # use astropy's wcsaxes tool to create an RA/Dec image
+        
+        # use astropy's wcsaxes tool to create an image with RA/DEC on axis
         ax = fig.add_axes([0.15, 0.1, 0.8, 0.8], projection=mywcs)
         
         ax.set_xlabel("RA", fontsize=15)
         ax.set_ylabel("Dec", fontsize=15)
         
+        # Show image
         ax.imshow(image[0].data, cmap='gray_r', interpolation='none', origin='lower',
                   norm=pl.matplotlib.colors.LogNorm())
         
@@ -556,7 +575,7 @@ for idx, each_galaxy in enumerate(HIPASS_sources):
     #ax.axis([100, 200, 100, 200])
 
 
-# # Bokeh - hover
+# # Show results in interactive mode using Bokeh and its hover feature
 
 # In[58]:
 
@@ -569,12 +588,13 @@ output_notebook()
 # In[59]:
 
 
-print(df['HIPASS'])
+#print(df['HIPASS'])
 
 
-# In[60]:
+# In[167]:
 
 
+# Get the list of the downloaded HIPASS spectra and HIPASS spectra from the folder where they were downloaded and save a list of them
 import glob
 List_of_images = glob.glob("./HIPASS_images/*.png")
 print(List_of_images)
@@ -583,9 +603,14 @@ List_of_spectra = glob.glob("./HIPASS_spectra/*.png")
 print(List_of_spectra)
 
 
-# In[61]:
+# In[169]:
 
 
+# Add bokeh features
+# We are plotting x and y data
+# As desc - description - we will have name of the object
+# as spectra and imgs -- we will have spectrum image and optical image for each source as we hover above plotted points
+# Depending on the speed of your internet, when first time hovering on points - wait a couple of seconds for images to appear
 
 source = ColumnDataSource(
         data=dict(
@@ -595,6 +620,7 @@ source = ColumnDataSource(
             spectra = List_of_spectra,
             imgs = List_of_images,))
 
+# Adding html code to say how the images and source name will be displayed
 hover = HoverTool( tooltips="""
     <div>
         <div>
@@ -622,11 +648,11 @@ hover = HoverTool( tooltips="""
     """
 )
 
-
+# Define figure size, assign tools and give name
 p = figure(plot_width=700, plot_height=700, tools=[hover],
-           title="Mouse over the dots")
+           title="The HI Parkes All Sky Survey")
 
-
+# Plot x and y data
 p.circle('x', 'y', size=10, color='black', source=source)
 #p.line([8.5,9,10,11], [8.5,9,10,11], line_width=1, line_color='blue')
 
