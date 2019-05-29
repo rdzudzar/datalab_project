@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[15]:
 
 
 __author__ = 'Robert Dzudzar <robertdzudzar@gmail.com>, <rdzudzar@swin.edu.au>'
@@ -39,7 +39,7 @@ __keywords__ = ['Neutral Hydrogen', 'Galaxies','bokeh','Spectra']
 # <a class="anchor" id="import"></a>
 # # Imports and setup
 
-# In[148]:
+# In[16]:
 
 
 # std lib
@@ -176,7 +176,7 @@ ax.yaxis.set_visible(False)
 
 # # Import HIPASS data
 
-# In[149]:
+# In[17]:
 
 
 # Load galaxy properties from HIPASS data (https://ui.adsabs.harvard.edu/abs/2004MNRAS.350.1195M/abstract)
@@ -185,20 +185,20 @@ HIPASS_data = Table.read('HIPASS_catalog.fit')
 df_hipass = HIPASS_data.to_pandas()
 
 
-# In[150]:
+# In[18]:
 
 
 # Dataframe
 df_hipass
 
 
-# In[7]:
+# In[174]:
 
 
 #print(df['_RAJ2000'])
 
 
-# In[8]:
+# In[175]:
 
 
 #fig = plt.figure(figsize=(10,10)) 
@@ -213,7 +213,7 @@ df_hipass
 
 # ## Plot the Sky coverage of the HIPASS survey
 
-# In[152]:
+# In[19]:
 
 
 # Plot HIPASS survey
@@ -236,27 +236,26 @@ ax.yaxis.label.set_fontsize(12)
 # Invalid value encountered probably because of x limits are +/- Pi which are both singularities on the Mollweide projection.
 
 
-# In[153]:
+# In[20]:
 
 
 # Small sub-sample of the HIPASS data
-df = df_hipass[0:6]
+df = df_hipass[0:100]
 df
 
 
-# In[154]:
+# In[21]:
 
 
 import requests
 #mport json
 #rom pandas.io.json import json_normalize
 from bs4 import BeautifulSoup
-import tqdm
 
 
 # ## Scraping url-s where the data of the HIPASS spectra is storred
 
-# In[157]:
+# In[22]:
 
 
 # Edit url for each galaxy in HIPASS: for making url-s we need: RA, DEC, and a number of the cube from where data was extracted
@@ -290,13 +289,13 @@ for galaxy in range(df.index[0], df.index[0]+len(df)):
     print(s)
 
 
-# In[10]:
+# In[23]:
 
 
 #http://www.atnf.csiro.au/cgi-bin/multi/release/download.cgi?cubename=/var/www/vhosts/www.atnf.csiro.au/htdocs/research/multibeam/release/MULTI_3_HIDE/PUBLIC/H006_abcde_luther.FELO.imbin.vrd&hann=1&coord=15%3A48%3A13.1%2C-78%3A09%3A16&xrange=-1281%2C12741&xaxis=optical&datasource=hipass&type=ascii
 
 
-# In[158]:
+# In[24]:
 
 
 # Extract the HIPASS source names from the table; String manipulation is needed to strip certain characters from name 
@@ -311,7 +310,7 @@ for galaxy_name in range(df.index[0], df.index[0]+len(df)):
 print(HIPASS_sources)
 
 
-# In[159]:
+# In[25]:
 
 
 # We want to go to each url and extract only the spectra data
@@ -364,7 +363,7 @@ for each_galaxy in all_s:
 
 # ## Plot the HI spectra for each source
 
-# In[160]:
+# In[26]:
 
 
 # Plot the spectrum
@@ -398,7 +397,7 @@ for idx, i in enumerate(range(len(Velocity))):
     plt.show()
 
 
-# In[9]:
+# In[27]:
 
 
 from astroquery.vizier import Vizier
@@ -406,14 +405,14 @@ from astroquery.vizier import Vizier
 
 # # Query (optical) images of the HIPASS sources
 
-# In[53]:
+# In[28]:
 
 
 # Using SkyView to get the DSS images of the sources
 from astroquery.skyview import SkyView
 
 
-# In[161]:
+# In[29]:
 
 
 #list all available image data which can be obtained from SkyView
@@ -428,7 +427,7 @@ SkyView.list_surveys()
 #                  'DSS2 IR'],
 
 
-# In[162]:
+# In[30]:
 
 
 from astropy import coordinates, units as u, wcs
@@ -437,7 +436,7 @@ from astroquery.vizier import Vizier
 import pylab as pl
 
 
-# In[163]:
+# In[31]:
 
 
 # To query Sky position (images) of sources, we need central position of each detection in HIPASS so we extract them using SkyCoord
@@ -449,7 +448,7 @@ for each_galaxy in HIPASS_sources:
     #print(center)
 
 
-# In[165]:
+# In[32]:
 
 
 # Get image from the SkyView based on the position
@@ -474,7 +473,7 @@ ax.imshow(image[0].data, cmap='gray_r', interpolation='none', origin='lower',
           norm=pl.matplotlib.colors.LogNorm());
 
 
-# In[19]:
+# In[33]:
 
 
 #Example is downloading a LOT of files!!
@@ -520,11 +519,11 @@ ax.imshow(image[0].data, cmap='gray_r', interpolation='none', origin='lower',
 #plt.imshow(rgb_img, origin='lower', interpolation='none')
 
 
-# In[166]:
+# In[34]:
 
 
 from urllib.error import HTTPError
-
+TIMEOUT_SECONDS = 3600
 # Get image from the SkyView based on the position
 # Radius of the extracted images is matched to the HIPASS primary beam (~15 arcmin)
 # Attention --- Not all HIPASS sources are clearly identified, since the beam is 15 arcmin there are confused sources - thus
@@ -577,7 +576,7 @@ for idx, each_galaxy in enumerate(HIPASS_sources):
 
 # # Show results in interactive mode using Bokeh and its hover feature
 
-# In[58]:
+# In[35]:
 
 
 from bokeh.plotting import figure, output_file, show, ColumnDataSource, gridplot, save
@@ -585,13 +584,13 @@ from bokeh.models import HoverTool
 output_notebook()
 
 
-# In[59]:
+# In[36]:
 
 
 #print(df['HIPASS'])
 
 
-# In[167]:
+# In[37]:
 
 
 # Get the list of the downloaded HIPASS spectra and HIPASS spectra from the folder where they were downloaded and save a list of them
@@ -603,7 +602,18 @@ List_of_spectra = glob.glob("./HIPASS_spectra/*.png")
 print(List_of_spectra)
 
 
-# In[169]:
+# In[38]:
+
+
+# HI mass approximation only! here we assume RVmom is recessional velocity!
+# Also using approximate distance as: RVmom * H0
+
+H0 = 70 # Hubble constant
+Distance = df['RVmom']/H0
+HI_mass = np.log10(2.365*10e5*(Distance**2)*df['Sint'])
+
+
+# In[39]:
 
 
 # Add bokeh features
@@ -612,10 +622,13 @@ print(List_of_spectra)
 # as spectra and imgs -- we will have spectrum image and optical image for each source as we hover above plotted points
 # Depending on the speed of your internet, when first time hovering on points - wait a couple of seconds for images to appear
 
+import matplotlib as mpl
+from bokeh.palettes import BuGn8
+
 source = ColumnDataSource(
         data=dict(
-            x = df['RVmom'],
-            y = df['Sint'], 
+            x = Distance,
+            y = HI_mass, 
             desc = HIPASS_sources ,
             spectra = List_of_spectra,
             imgs = List_of_images,))
@@ -649,11 +662,19 @@ hover = HoverTool( tooltips="""
 )
 
 # Define figure size, assign tools and give name
-p = figure(plot_width=700, plot_height=700, tools=[hover],
+p = figure(plot_width=700, plot_height=700, tools=[hover], 
            title="The HI Parkes All Sky Survey")
 
+p.xaxis.axis_label = 'Distance [Mpc]'
+p.yaxis.axis_label = r'log HI mass'
+
+
+colors = ['black', 'red']
+
+
 # Plot x and y data
-p.circle('x', 'y', size=10, color='black', source=source)
+p.scatter('x', 'y', size=12, color=colors[0], source=source, fill_alpha=0.5)
+
 #p.line([8.5,9,10,11], [8.5,9,10,11], line_width=1, line_color='blue')
 
 #p.yaxis.axis_label = 'HI mass observed [Mo]'
