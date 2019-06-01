@@ -39,7 +39,7 @@ __keywords__ = ['Neutral Hydrogen', 'Galaxies','bokeh','Spectra']
 # <a class="anchor" id="import"></a>
 # # Imports and setup
 
-# In[6]:
+# In[92]:
 
 
 # std lib
@@ -176,7 +176,7 @@ ax.yaxis.set_visible(False)
 
 # # Import HIPASS data
 
-# In[7]:
+# In[93]:
 
 
 # Load galaxy properties from HIPASS data (https://ui.adsabs.harvard.edu/abs/2004MNRAS.350.1195M/abstract)
@@ -185,7 +185,7 @@ HIPASS_data = Table.read('HIPASS_catalog.fit')
 df_hipass = HIPASS_data.to_pandas()
 
 
-# In[8]:
+# In[94]:
 
 
 # Dataframe
@@ -236,7 +236,7 @@ ax.yaxis.label.set_fontsize(12)
 # Invalid value encountered probably because of x limits are +/- Pi which are both singularities on the Mollweide projection.
 
 
-# In[9]:
+# In[95]:
 
 
 # Small sub-sample of the HIPASS data
@@ -244,7 +244,13 @@ df = df_hipass[0:100]
 df
 
 
-# In[12]:
+# In[82]:
+
+
+df['W50min'][3]
+
+
+# In[96]:
 
 
 import requests
@@ -255,7 +261,7 @@ from bs4 import BeautifulSoup
 
 # ## Scraping url-s where the data of the HIPASS spectra is storred
 
-# In[13]:
+# In[97]:
 
 
 # Edit url for each galaxy in HIPASS: for making url-s we need: RA, DEC, and a number of the cube from where data was extracted
@@ -295,7 +301,7 @@ for galaxy in range(df.index[0], df.index[0]+len(df)):
 #http://www.atnf.csiro.au/cgi-bin/multi/release/download.cgi?cubename=/var/www/vhosts/www.atnf.csiro.au/htdocs/research/multibeam/release/MULTI_3_HIDE/PUBLIC/H006_abcde_luther.FELO.imbin.vrd&hann=1&coord=15%3A48%3A13.1%2C-78%3A09%3A16&xrange=-1281%2C12741&xaxis=optical&datasource=hipass&type=ascii
 
 
-# In[15]:
+# In[98]:
 
 
 # Extract the HIPASS source names from the table; String manipulation is needed to strip certain characters from name 
@@ -310,7 +316,13 @@ for galaxy_name in range(df.index[0], df.index[0]+len(df)):
 print(HIPASS_sources)
 
 
-# In[16]:
+# In[117]:
+
+
+print(sorted(HIPASS_sources))
+
+
+# In[99]:
 
 
 # We want to go to each url and extract only the spectra data
@@ -363,15 +375,15 @@ for each_galaxy in all_s:
 
 # ## Plot the HI spectra for each source
 
-# In[70]:
+# In[178]:
 
 
 # Plot the spectrum
 # For each source that was extracted
-
+store_indices = []
 for idx, i in enumerate(range(len(Velocity))):
 #for i in range(len(Velocity)):
-    
+    store_indices.append(idx)
     fig = plt.figure(figsize=(8,7))                                                               
     ax = fig.add_subplot(1,1,1)
     
@@ -396,12 +408,12 @@ for idx, i in enumerate(range(len(Velocity))):
     ax.get_yaxis().set_tick_params(which = 'both', direction='in', right = True, size = 8)
     ax.get_xaxis().set_tick_params(which = 'both', direction='in', top = True, size = 8)
     
-    plt.legend(loc=1)
+    plt.legend(loc=1, fontsize=25)
     fig.savefig('./HIPASS_spectra/00{0}.png'.format(idx), overwrite=True)
     plt.show()
 
 
-# In[51]:
+# In[126]:
 
 
 from astroquery.vizier import Vizier
@@ -409,7 +421,7 @@ from astroquery.vizier import Vizier
 
 # # Query (optical) images of the HIPASS sources
 
-# In[19]:
+# In[ ]:
 
 
 # Using SkyView to get the DSS images of the sources
@@ -431,7 +443,7 @@ SkyView.list_surveys()
 #                  'DSS2 IR'],
 
 
-# In[10]:
+# In[109]:
 
 
 from astropy import coordinates, units as u, wcs
@@ -589,7 +601,7 @@ for idx, each_galaxy in enumerate(HIPASS_sources):
 
 # # Show results in interactive mode using Bokeh and its hover feature
 
-# In[11]:
+# In[110]:
 
 
 from bokeh.plotting import figure, output_file, show, ColumnDataSource, gridplot, save
@@ -603,19 +615,58 @@ output_notebook()
 #print(df['HIPASS'])
 
 
-# In[12]:
+# In[131]:
+
+
+list1 = ["1","10","3","22","23","4","2","200"]
+list1 = [int(x) for x in list1]
+a = sorted(list1)
+print(a)
+
+
+# In[165]:
+
+
+from os import listdir
+
+extension = '.png'
+mypath = r'./HIPASS_images/'
+filesWithExtension = [ f for f in listdir(mypath) if f[(len(f) - len(extension)):len(f)].find(extension)>=0 ]
+raw_image_indices = [x.rstrip('.png') for x in filesWithExtension]
+
+
+# In[168]:
 
 
 # Get the list of the downloaded HIPASS spectra and HIPASS spectra from the folder where they were downloaded and save a list of them
-import glob
-List_of_images = glob.glob("./HIPASS_images/*.png")
-print(sorted(List_of_images))
+#import glob
+#List_of_images = glob.glob("./HIPASS_images/*.png")
+#print(str(List_of_images))
 
-List_of_spectra = glob.glob("./HIPASS_spectra/*.png")
-print(List_of_spectra)
+raw_image_indices = [int(x) for x in raw_image_indices]
+sorted_list_of_images = sorted(raw_image_indices)
+print(sorted_list_of_images)
+
+#List_of_spectra = glob.glob("./HIPASS_spectra/*.png")
+#print(sorted(List_of_spectra))
+#list1 = [int(x) for x in list1]
+#list1.sort()
 
 
-# In[13]:
+# In[175]:
+
+
+new_list_sorted = []
+new_list_images = []
+for i in sorted_list_of_images:
+    New_list_s = './HIPASS_spectra/00'+str(i)+'.png'
+    New_list_i = './HIPASS_images/00'+str(i)+'.png'
+    new_list_sorted.append(New_list_s)
+    new_list_images.append(New_list_i)
+print(new_list_sorted)
+
+
+# In[120]:
 
 
 # HI mass approximation only! here we assume RVmom is recessional velocity!
@@ -626,7 +677,7 @@ Distance = df['RVmom']/H0
 HI_mass = np.log10(2.365*10e5*(Distance**2)*df['Sint'])
 
 
-# In[65]:
+# In[179]:
 
 
 # Add bokeh features
@@ -642,13 +693,13 @@ from bokeh.models import ColumnDataSource, ColorBar
 
 source = ColumnDataSource(
         data=dict(
-            x = Distance,
-            y = HI_mass, 
+            x = df['RVmom'], #Distance,
+            y = df['Sint'], #HI_mass, 
             z = df['W50min'],
             desc = HIPASS_sources ,
             Int = df['Sint'],
-            spectra = sorted(List_of_spectra),
-            imgs = sorted(List_of_images),))
+            spectra = new_list_sorted,
+            imgs = new_list_images,))
 
 # Adding html code to say how the images and source name will be displayed
 hover = HoverTool(    tooltips="""
@@ -715,8 +766,11 @@ p.add_layout(color_bar, 'right')
 show(p)
 
 
-# In[ ]:
+# In[180]:
 
 
-
+print(df['W50min'][3])
+print(df['HIPASS'][3])
+print(df['Sint'][3])
+print(df['RVmom'][3])
 
