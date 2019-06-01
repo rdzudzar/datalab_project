@@ -609,53 +609,29 @@ from bokeh.models import HoverTool, BoxSelectTool
 output_notebook()
 
 
-# In[38]:
+# ### Extracting/Sorting images and spectra which we have
+
+# In[204]:
 
 
-#print(df['HIPASS'])
-
-
-# In[131]:
-
-
-list1 = ["1","10","3","22","23","4","2","200"]
-list1 = [int(x) for x in list1]
-a = sorted(list1)
-print(a)
-
-
-# In[165]:
-
+# Check files in the downloaded folder and play around with the strings to sort them and extract
 
 from os import listdir
 
 extension = '.png'
 mypath = r'./HIPASS_images/'
-filesWithExtension = [ f for f in listdir(mypath) if f[(len(f) - len(extension)):len(f)].find(extension)>=0 ]
-raw_image_indices = [x.rstrip('.png') for x in filesWithExtension]
+# Get all the files from a directory with extension
+files_with_extension = [ f for f in listdir(mypath) if f[(len(f) - len(extension)):len(f)].find(extension)>=0 ]
+# Strip the extension from the files
+raw_image_indices = [x.rstrip('.png') for x in files_with_extension]
 
-
-# In[168]:
-
-
-# Get the list of the downloaded HIPASS spectra and HIPASS spectra from the folder where they were downloaded and save a list of them
-#import glob
-#List_of_images = glob.glob("./HIPASS_images/*.png")
-#print(str(List_of_images))
-
+# For all the files now we can use integer sorting so that we obtain: 01 02 03 and not 01 10 etc.
 raw_image_indices = [int(x) for x in raw_image_indices]
 sorted_list_of_images = sorted(raw_image_indices)
-print(sorted_list_of_images)
+#print(sorted_list_of_images)
 
-#List_of_spectra = glob.glob("./HIPASS_spectra/*.png")
-#print(sorted(List_of_spectra))
-#list1 = [int(x) for x in list1]
-#list1.sort()
-
-
-# In[175]:
-
-
+# For the new created list we are adding now image/spectra location and .png
+# We create new arrays with the files
 new_list_sorted = []
 new_list_images = []
 for i in sorted_list_of_images:
@@ -664,6 +640,18 @@ for i in sorted_list_of_images:
     new_list_sorted.append(New_list_s)
     new_list_images.append(New_list_i)
 print(new_list_sorted)
+
+
+# In[203]:
+
+
+# Get the list of the downloaded HIPASS spectra and HIPASS spectra from the folder where they were downloaded and save a list of them
+#import glob
+#LL = glob.glob("./HIPASS_images/*.png")
+#print(LL)
+
+#List_of_spectra = glob.glob("./HIPASS_spectra/*.png")
+#print(sorted(List_of_spectra))
 
 
 # In[120]:
