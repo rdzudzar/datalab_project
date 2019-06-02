@@ -17,21 +17,27 @@ __keywords__ = ['Neutral Hydrogen', 'Galaxies','bokeh','Spectra']
 # * [Goals & notebook summary](#goals)
 # * [Disclaimer & Attribution](#attribution)
 # * [Imports & setup](#import)
-# * [Authentication](#auth)
-# * [Import HIPASS data](#chapter1)
+# * [Authentication](#auth)  
+# 
+# * #### [Import HIPASS data](#chapter1)
 #     * [Plot the Sky coverage of the HIPASS survey](#chapter1.1)
 #     * [Make a smaller dataset of HIPASS data](#chapter1.2)
 #     * [Scraping url-s where the data of the HIPASS spectra is storred](#chapter1.3)
 #     * [Creating list of HIPASS sources](#chapter1.4)
 #     * [Extracting spectral information from HIPASS database](#chapter1.5)
-#     * [Plotting the HI spectra for each source](#chapter1.6)
-# * [Query optical counterparts of the HIPASS sources](#chapter2)
+#     * [Plotting the HI spectra for each source](#chapter1.6)  
+# 
+# * #### [Query optical counterparts of the HIPASS sources](#chapter2)
 #     * [Create a list of coordinates](#chapter2.1)
-#     * [Download and save images from SkyView](#chapter2.2)
-# * [Setting up Bokeh for interactive examination](#chapter3)
+#     * [Download and save images from SkyView](#chapter2.2)  
+# 
+# * #### [Setting up Bokeh for interactive examination](#chapter3)
 #     * [Extracting/Sorting images and spectra which we have](#chapter3.1)
-#     * [Approximate Distance and HI mass](#chapter3.2)
-# * [Interactive visualization with Bokeh](#chapter4)
+#     * [Approximate Distance and HI mass](#chapter3.2)  
+# 
+# * #### [Interactive visualization with Bokeh](#chapter4)  
+# 
+# 
 # * [Resources and references](#resources)
 
 # <a class="anchor" id="goals"></a>
@@ -690,3 +696,30 @@ show(p)
 output_file('HIPASS_interactive_search.html', mode='inline')
 save(p)
 
+
+# <a class="anchor" id="resources"></a>
+# # Resources and references
+
+# #### The HIPASS data (Barnes et al (http://adsabs.harvard.edu/abs/2001MNRAS.322..486B))
+# Data used in this notebook are published by Meyer et al. 2004 https://ui.adsabs.harvard.edu/?#abs/2004MNRAS.350.1195M
+# 
+# ##### The HIPASS table 
+# Table is obtained through VizieR services: This research has made use of the VizieR catalogue access tool, CDS,  Strasbourg, France (DOI : 10.26093/cds/vizier). The original description of the VizieR service was published in A&AS 143, 23
+# 
+# The Parkes telescope is part of the Australia Telescope which is funded by the Commonwealth of Australia for operation as a National Facility managed by CSIRO. The full HI database is located here http://www.atnf.csiro.au/research/multibeam/release/
+# 
+# #### SkyView 
+# Sky View has been developed with generous support from the NASA AISR and ADP programs (P.I. Thomas A. McGlynn) under the auspices of the High Energy Astrophysics Science Archive Research Center (HEASARC) at the NASA/ GSFC Astrophysics Science Division. (https://skyview.gsfc.nasa.gov/current/cgi/survey.pl)
+# 
+# #### Optical images 
+# Obtained from Original Digitised Data Service: STScI, ROE, AAO, UK-PPARC, CalTech, National Geographic Society. (http://archive.stsci.edu/dss/copyright.html)
+# 
+# #### Used Python3 and Python packages:
+# 
+# Astropy (Astropy Collaboration, doi: 10.1051/0004-6361/201322068) https://www.astropy.org/  
+# Pandas The official documentation is hosted on PyData.org: https://pandas.pydata.org/pandas-docs/stable   
+# Bokeh : Bokeh Development Team (2018). Bokeh: Python library for interactive visualization URL http://www.bokeh.pydata.org.  
+# Matplotlib (Hunter el al. 2007, doi: 10.1109/MCSE.2007.55) http://matplotlib.org/  
+# Numpy (van der Walt 2011, doi: 10.1109/MCSE.2011.37) http://www.numpy.org/  
+# Requests (Copyright 2018 Kenneth Reitz), https://2.python-requests.org/en/master/  
+# BeautifulSoup https://www.crummy.com/software/BeautifulSoup/bs4/doc/  
