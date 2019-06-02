@@ -10,7 +10,7 @@ __version__ = '20190511' # yyyymmdd; version datestamp of this notebook
 __keywords__ = ['Neutral Hydrogen', 'Galaxies','bokeh','Spectra']
 
 
-# # Interactively examining the HI Parkes All Sky Survey 
+# # Interactively examining the HI Parkes All Sky Survey (HIPASS)
 # *Robert Dzudzar*
 
 # ### Table of contents
@@ -18,7 +18,20 @@ __keywords__ = ['Neutral Hydrogen', 'Galaxies','bokeh','Spectra']
 # * [Disclaimer & Attribution](#attribution)
 # * [Imports & setup](#import)
 # * [Authentication](#auth)
-# * [First chapter](#chapter1)
+# * [Import HIPASS data](#chapter1)
+#     * [Plot the Sky coverage of the HIPASS survey](#chapter1.1)
+#     * [Make a smaller dataset of HIPASS data](#chapter1.2)
+#     * [Scraping url-s where the data of the HIPASS spectra is storred](#chapter1.3)
+#     * [Creating list of HIPASS sources](#chapter1.4)
+#     * [Extracting spectral information from HIPASS database](#chapter1.5)
+#     * [Plotting the HI spectra for each source](#chapter1.6)
+# * [Query optical counterparts of the HIPASS sources](#chapter2)
+#     * [Create a list of coordinates](#chapter2.1)
+#     * [Download and save images from SkyView](#chapter2.2)
+# * [Setting up Bokeh for interactive examination](#chapter3)
+#     * [Extracting/Sorting images and spectra which we have](#chapter3.1)
+#     * [Approximate Distance and HI mass](#chapter3.2)
+# * [Interactive visualization with Bokeh](#chapter4)
 # * [Resources and references](#resources)
 
 # <a class="anchor" id="goals"></a>
@@ -26,7 +39,7 @@ __keywords__ = ['Neutral Hydrogen', 'Galaxies','bokeh','Spectra']
 # This notebook is for interactive exploration of the multiwavelength data, in particular: a combination of the radio data (measured properties and HI emission line spectra) from the HI Parks All Sky Survey and the optical data. 
 
 # # Summary
-# We utilize data from the HI Parks All Sky Survey (HIPASS) presented in https://ui.adsabs.harvard.edu/?#abs/2004MNRAS.350.1195M and publicly awailable at http://www.atnf.csiro.au/research/multibeam/release/. The HIPASS data are presented in the form of numerical properties of the sources and their HI emission line spectra. We combine the HI spectra from the HIPASS with their optical images in an interactive environment, therefore, explore dataset with visualization approach. 
+# We utilize data from the HI Parks All Sky Survey (HIPASS) presented in https://ui.adsabs.harvard.edu/?#abs/2004MNRAS.350.1195M and publicly awailable at http://www.atnf.csiro.au/research/multibeam/release/. The HIPASS data are presented in the form of numerical properties of the sources (galaxies) and their HI emission line spectra. We obtain the HI spectra from the HIPASS database and query their optical images from SkyView. The both datasets are then combined in an interactive environment, which enables numerical and visual examination of the data. 
 
 # <a class="anchor" id="attribution"></a>
 # # Disclaimer & attribution
@@ -165,6 +178,7 @@ ax.xaxis.set_visible(False)
 ax.yaxis.set_visible(False)
 
 
+# <a class="anchor" id="chapter1"></a>
 # # Import HIPASS data
 
 # In[3]:
@@ -176,13 +190,16 @@ HIPASS_data = Table.read('HIPASS_catalog.fit')
 df_hipass = HIPASS_data.to_pandas()
 
 
-# In[4]:
+# In[56]:
 
 
-# Dataframe
+# Display the dataframe
 df_hipass
+# You can see all the columns:
+#df_hipass.columns
 
 
+# <a class="anchor" id="chapter1.1"></a>
 # ## Plot the Sky coverage of the HIPASS survey
 
 # In[5]:
@@ -208,9 +225,14 @@ ax.yaxis.label.set_fontsize(12)
 # Invalid value encountered probably because of x limits are +/- Pi which are both singularities on the Mollweide projection.
 
 
-# In[6]:
+# <a class="anchor" id="chapter1.2"></a>
+# ## Make a smaller dataset of HIPASS data
+
+# In[57]:
 
 
+# For faster download of the optical images and HI spectra, it is recommended to start with smaller sample
+# Pre-compiled 500 takes a long to run (~1hour) from scratch
 # Small sub-sample of the HIPASS data
 df = df_hipass[0:500]
 df
@@ -225,6 +247,7 @@ import requests
 from bs4 import BeautifulSoup
 
 
+# <a class="anchor" id="chapter1.3"></a>
 # ## Scraping url-s where the data of the HIPASS spectra is storred
 
 # In[8]:
@@ -267,6 +290,9 @@ for galaxy in range(df.index[0], df.index[0]+len(df)):
 #http://www.atnf.csiro.au/cgi-bin/multi/release/download.cgi?cubename=/var/www/vhosts/www.atnf.csiro.au/htdocs/research/multibeam/release/MULTI_3_HIDE/PUBLIC/H006_abcde_luther.FELO.imbin.vrd&hann=1&coord=15%3A48%3A13.1%2C-78%3A09%3A16&xrange=-1281%2C12741&xaxis=optical&datasource=hipass&type=ascii
 
 
+# <a class="anchor" id="chapter1.4"></a>
+# ##  Creating list of HIPASS sources
+
 # In[10]:
 
 
@@ -281,6 +307,9 @@ for galaxy_name in range(df.index[0], df.index[0]+len(df)):
     HIPASS_sources.append('HIPASS'+gal_name)
 print(HIPASS_sources)
 
+
+# <a class="anchor" id="chapter1.5"></a>
+# ## Extracting spectral information from HIPASS database
 
 # In[11]:
 
@@ -333,12 +362,13 @@ for each_galaxy in all_s:
     
 
 
-# ## Plot the HI spectra for each source
+# <a class="anchor" id="chapter1.6"></a>
+# ## Plotting the HI spectra for each source
 
 # In[40]:
 
 
-# Plot the spectrum
+# Plot the spectra of all sources and save files in a subdirectory - these will be used for interactive examination
 # For each source that was extracted
 store_indices = []
 for idx, i in enumerate(range(len(Velocity))):
@@ -379,13 +409,14 @@ for idx, i in enumerate(range(len(Velocity))):
 from astroquery.vizier import Vizier
 
 
-# # Query (optical) images of the HIPASS sources
+# <a class="anchor" id="chapter2"></a>
+# # Query optical counterparts of the HIPASS sources
 
 # In[14]:
 
 
 # Using SkyView to get the DSS images of the sources
-from astroquery.skyview import SkyView
+#from astroquery.skyview import SkyView
 
 
 # In[15]:
@@ -413,6 +444,9 @@ from astroquery.vizier import Vizier
 import pylab as pl
 
 
+# <a class="anchor" id="chapter2.1"></a>
+# ## Create a list of coordinates
+
 # In[17]:
 
 
@@ -431,31 +465,9 @@ for each_galaxy in df.index:
     #print(center)
 
 
-# In[ ]:
-
-
-# Get image from the SkyView based on the position
-# Radius of the extracted images is matched to the HIPASS primary beam (~15 arcmin)
-images = SkyView.get_images(position=c[2], pixels=[500,500], survey='WISE 3.4', radius=15*u.arcmin)
-image = images[0]
-
-# 'imgage' is now a fits.HDUList object; the 0th entry is the image
-mywcs = wcs.WCS(image[0].header)
-
-# Plot the image
-fig = pl.figure(figsize=(8,8))
-fig.clf() # just in case one was open before
-
-# Use astropy's wcsaxes tool to create an RA/Dec image with coordinates on the axis
-ax = fig.add_axes([0.15, 0.1, 0.8, 0.8], projection=mywcs)
-ax.set_xlabel("RA")
-ax.set_ylabel("Dec")
-
-
-# Show image as grayscale
-ax.imshow(image[0].data, cmap='gray_r', interpolation='none', origin='lower',
-          norm=pl.matplotlib.colors.LogNorm());
-
+# <a class="anchor" id="chapter2.2"></a>
+# ## Download and save images from SkyView
+# ### (This cell takes long to run for large number of sources (~1h for 500))
 
 # In[18]:
 
@@ -513,9 +525,10 @@ for idx, each_galaxy in enumerate(HIPASS_sources):
     #ax.axis([100, 200, 100, 200])
 
 
-# # Show results in interactive mode using Bokeh and its hover feature
+# <a class="anchor" id="chapter3"></a>
+# # Setting up Bokeh for interactive examination
 
-# In[19]:
+# In[58]:
 
 
 from bokeh.plotting import figure, output_file, show, ColumnDataSource, gridplot, save
@@ -523,6 +536,7 @@ from bokeh.models import HoverTool, BoxSelectTool
 output_notebook()
 
 
+# <a class="anchor" id="chapter3.1"></a>
 # ### Extracting/Sorting images and spectra which we have
 
 # In[20]:
@@ -556,6 +570,9 @@ for i in sorted_list_of_images:
 #print(new_list_sorted)
 
 
+# <a class="anchor" id="chapter3.2"></a>
+# ### Approximate Distance and HI mass
+
 # In[21]:
 
 
@@ -566,6 +583,9 @@ H0 = 70 # Hubble constant
 Distance = df['RVmom']/H0
 HI_mass = np.log10(2.365*10e5*(Distance**2)*df['Sint'])
 
+
+# <a class="anchor" id="chapter4"></a>
+# # Interactive visualization with Bokeh
 
 # In[55]:
 
@@ -663,8 +683,10 @@ p.axis.major_tick_in = 12
 p.axis.minor_tick_in = 6
 p.axis.minor_tick_out = 0
 
+# Show in notebook
 show(p)
 
+# Save as html file and then open in browser to visualize
 output_file('HIPASS_interactive_search.html', mode='inline')
 save(p)
 
