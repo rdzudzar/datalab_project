@@ -39,7 +39,7 @@ __keywords__ = ['Neutral Hydrogen', 'Galaxies','bokeh','Spectra']
 # <a class="anchor" id="import"></a>
 # # Imports and setup
 
-# In[274]:
+# In[2]:
 
 
 # std lib
@@ -167,7 +167,7 @@ ax.yaxis.set_visible(False)
 
 # # Import HIPASS data
 
-# In[275]:
+# In[3]:
 
 
 # Load galaxy properties from HIPASS data (https://ui.adsabs.harvard.edu/abs/2004MNRAS.350.1195M/abstract)
@@ -176,7 +176,7 @@ HIPASS_data = Table.read('HIPASS_catalog.fit')
 df_hipass = HIPASS_data.to_pandas()
 
 
-# In[276]:
+# In[4]:
 
 
 # Dataframe
@@ -185,7 +185,7 @@ df_hipass
 
 # ## Plot the Sky coverage of the HIPASS survey
 
-# In[277]:
+# In[5]:
 
 
 # Plot HIPASS survey
@@ -208,15 +208,15 @@ ax.yaxis.label.set_fontsize(12)
 # Invalid value encountered probably because of x limits are +/- Pi which are both singularities on the Mollweide projection.
 
 
-# In[278]:
+# In[6]:
 
 
 # Small sub-sample of the HIPASS data
-df = df_hipass[0:200]
+df = df_hipass[0:500]
 df
 
 
-# In[279]:
+# In[7]:
 
 
 import requests
@@ -227,7 +227,7 @@ from bs4 import BeautifulSoup
 
 # ## Scraping url-s where the data of the HIPASS spectra is storred
 
-# In[280]:
+# In[8]:
 
 
 # Edit url for each galaxy in HIPASS: for making url-s we need: RA, DEC, and a number of the cube from where data was extracted
@@ -261,13 +261,13 @@ for galaxy in range(df.index[0], df.index[0]+len(df)):
     print(s)
 
 
-# In[14]:
+# In[9]:
 
 
 #http://www.atnf.csiro.au/cgi-bin/multi/release/download.cgi?cubename=/var/www/vhosts/www.atnf.csiro.au/htdocs/research/multibeam/release/MULTI_3_HIDE/PUBLIC/H006_abcde_luther.FELO.imbin.vrd&hann=1&coord=15%3A48%3A13.1%2C-78%3A09%3A16&xrange=-1281%2C12741&xaxis=optical&datasource=hipass&type=ascii
 
 
-# In[281]:
+# In[10]:
 
 
 # Extract the HIPASS source names from the table; String manipulation is needed to strip certain characters from name 
@@ -282,7 +282,7 @@ for galaxy_name in range(df.index[0], df.index[0]+len(df)):
 print(HIPASS_sources)
 
 
-# In[282]:
+# In[11]:
 
 
 # We want to go to each url and extract only the spectra data
@@ -335,7 +335,7 @@ for each_galaxy in all_s:
 
 # ## Plot the HI spectra for each source
 
-# In[283]:
+# In[40]:
 
 
 # Plot the spectrum
@@ -365,15 +365,15 @@ for idx, i in enumerate(range(len(Velocity))):
     plt.ylabel('Flux density [Jy beam$^{-1}$]', fontsize = 15)
     plt.xlabel('Optical Velocity [km s$^{-1}$]', fontsize = 15)
     
-    ax.get_yaxis().set_tick_params(which = 'both', direction='in', right = True, size = 8)
-    ax.get_xaxis().set_tick_params(which = 'both', direction='in', top = True, size = 8)
+    ax.get_yaxis().set_tick_params(which = 'both', direction='in', right = True, size = 13)
+    ax.get_xaxis().set_tick_params(which = 'both', direction='in', top = True, size = 13)
     
-    plt.legend(loc=1, fontsize=25)
-    fig.savefig('./HIPASS_spectra/00{0}.png'.format(idx), overwrite=True)
-    plt.show()
+    plt.legend(loc=1, fontsize=20)
+    fig.savefig('./HIPASS_spectra/{0}.png'.format(idx), overwrite=True)
+    #plt.show()
 
 
-# In[284]:
+# In[13]:
 
 
 from astroquery.vizier import Vizier
@@ -381,14 +381,14 @@ from astroquery.vizier import Vizier
 
 # # Query (optical) images of the HIPASS sources
 
-# In[285]:
+# In[14]:
 
 
 # Using SkyView to get the DSS images of the sources
 from astroquery.skyview import SkyView
 
 
-# In[286]:
+# In[15]:
 
 
 #list all available image data which can be obtained from SkyView
@@ -403,7 +403,7 @@ SkyView.list_surveys()
 #                  'DSS2 IR'],
 
 
-# In[287]:
+# In[16]:
 
 
 from astropy import coordinates, units as u, wcs
@@ -413,7 +413,7 @@ from astroquery.vizier import Vizier
 import pylab as pl
 
 
-# In[288]:
+# In[17]:
 
 
 # To query Sky position (images) of sources, we need central position of each detection in HIPASS so we extract them using SkyCoord
@@ -457,7 +457,7 @@ ax.imshow(image[0].data, cmap='gray_r', interpolation='none', origin='lower',
           norm=pl.matplotlib.colors.LogNorm());
 
 
-# In[289]:
+# In[18]:
 
 
 from urllib.error import HTTPError
@@ -503,7 +503,7 @@ for idx, each_galaxy in enumerate(HIPASS_sources):
         #ax.get_yaxis().set_tick_params(which = 'both', direction='in', right = True, size = 8, labelsize=20)
         #ax.get_xaxis().set_tick_params(which = 'both', direction='in', top = True, size = 8)
     
-        fig.savefig('./HIPASS_images/00{0}.png'.format(idx), overwrite=True)
+        fig.savefig('./HIPASS_images/{0}.png'.format(idx), overwrite=True)
         
     except HTTPError:
         print('Image not found in the {0} filter'.format(Survey))
@@ -515,7 +515,7 @@ for idx, each_galaxy in enumerate(HIPASS_sources):
 
 # # Show results in interactive mode using Bokeh and its hover feature
 
-# In[290]:
+# In[19]:
 
 
 from bokeh.plotting import figure, output_file, show, ColumnDataSource, gridplot, save
@@ -525,7 +525,7 @@ output_notebook()
 
 # ### Extracting/Sorting images and spectra which we have
 
-# In[291]:
+# In[20]:
 
 
 # Check files in the downloaded folder and play around with the strings to sort them and extract
@@ -549,14 +549,14 @@ sorted_list_of_images = sorted(raw_image_indices)
 new_list_sorted = []
 new_list_images = []
 for i in sorted_list_of_images:
-    New_list_s = './HIPASS_spectra/00'+str(i)+'.png'
-    New_list_i = './HIPASS_images/00'+str(i)+'.png'
+    New_list_s = './HIPASS_spectra/'+str(i)+'.png'
+    New_list_i = './HIPASS_images/'+str(i)+'.png'
     new_list_sorted.append(New_list_s)
     new_list_images.append(New_list_i)
 #print(new_list_sorted)
 
 
-# In[292]:
+# In[21]:
 
 
 # HI mass approximation only! here we assume RVmom is recessional velocity!
@@ -567,7 +567,7 @@ Distance = df['RVmom']/H0
 HI_mass = np.log10(2.365*10e5*(Distance**2)*df['Sint'])
 
 
-# In[293]:
+# In[55]:
 
 
 # Add bokeh features
@@ -577,7 +577,7 @@ HI_mass = np.log10(2.365*10e5*(Distance**2)*df['Sint'])
 # Depending on the speed of your internet, when first time hovering on points - wait a couple of seconds for images to appear
 
 import matplotlib as mpl
-from bokeh.palettes import BuGn8
+from bokeh.palettes import BuGn8, viridis
 from bokeh.transform import linear_cmap
 from bokeh.models import ColumnDataSource, ColorBar
 
@@ -585,8 +585,9 @@ source = ColumnDataSource(
         data=dict(
             x = Distance,
             y = HI_mass, 
-            z = df['W50min'],
+            z = df['W20max'],
             desc = HIPASS_sources ,
+            confused = df['cf'],
             Int = df['Sint'],
             spectra = new_list_sorted,
             imgs = new_list_images,))
@@ -595,24 +596,29 @@ source = ColumnDataSource(
 hover = HoverTool(    tooltips="""
     <div>
         <div>
-            <img
-                src="@imgs" height="220" alt="@imgs" width="220"
-                style="float: left; margin: 0px 10px 10px 0px;"
-                border="2"
-            ></img>
-            
-             <img
-                src="@spectra" height="200" alt="@imgs" width="200"
-                style="float: right; margin: 0px 10px 10px 0px;"
-                border="2"
-            ></img>
+        
+        </div>
+            <span style="font-size: 17px; font-weight: bold; color: #c51b8a; ">@desc</span>
+        </div>   
+        
+            <table>
+            <tr>
+            <td><img src="@imgs" width="200" /></td>
+            <td><img src="@spectra" width="200" /></td>
+            </tr>
+            </table>
             
             
         <div>
             <span style="font-size: 15px;">Location</span>
-            <span style="font-size: 10px; color: #696;">($x, $y )</span>
+            <span style="font-size: 10px; font-weight: bold; color: #8856a7;">($x, $y )</span>
         </div>
         
+     
+        
+        </div>
+            <span style="font-size: 12px; font-weight: bold;">Confused source (if=1) = @confused</span>
+        </div>  
         
     </div>
     """
@@ -620,9 +626,7 @@ hover = HoverTool(    tooltips="""
         #<div>
         #<span style='font-size: 12px;'>Distance: @x</span>
         #</div>
-        #</div>
-        #    <span style="font-size: 17px; font-weight: bold;">@desc</span>
-        #</div>
+
         
 # Define figure size, assign tools and give name
 p = figure(plot_width=700, plot_height=700, tools=[hover, "pan,wheel_zoom,box_zoom,reset"], 
@@ -639,12 +643,12 @@ p.yaxis.major_label_text_font_size = "15pt"
 
 
 #Use the field name of the column source
-mapper = linear_cmap(field_name='z', palette=viridis(6) ,low=min(df['W50max']) ,high=max(df['W50max']))
+mapper = linear_cmap(field_name='z', palette=viridis(8) ,low=min(df['W20max']) ,high=max(df['W20max']))
 
 # Plot x and y data
 p.scatter('x', 'y', size=14,  line_color=mapper,color=mapper,  source=source, fill_alpha=0.7)
 
-color_bar = ColorBar(color_mapper=mapper['transform'], width=18,  location=(-2,-1), title='W50max')
+color_bar = ColorBar(color_mapper=mapper['transform'], width=18,  location=(-2,-1), title='W20max')
 
 
 p.add_layout(color_bar, 'right')
@@ -660,4 +664,7 @@ p.axis.minor_tick_in = 6
 p.axis.minor_tick_out = 0
 
 show(p)
+
+output_file('HIPASS_interactive_search.html', mode='inline')
+save(p)
 
