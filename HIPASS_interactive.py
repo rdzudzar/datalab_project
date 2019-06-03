@@ -1,13 +1,13 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[62]:
 
 
 __author__ = 'Robert Dzudzar <robertdzudzar@gmail.com>, <rdzudzar@swin.edu.au>'
 __version__ = '20190511' # yyyymmdd; version datestamp of this notebook
 #__datasets__ = ['des_dr1']
-__keywords__ = ['Neutral Hydrogen', 'Galaxies','bokeh','Spectra']
+__keywords__ = ['Interactive', 'Neutral Hydrogen', 'Spectra', 'Galaxies','Bokeh']
 
 
 # # Interactively examining the HI Parkes All Sky Survey (HIPASS)
@@ -21,7 +21,7 @@ __keywords__ = ['Neutral Hydrogen', 'Galaxies','bokeh','Spectra']
 # 
 # * #### [Import HIPASS data](#chapter1)
 #     * [Plot the Sky coverage of the HIPASS survey](#chapter1.1)
-#     * [Make a smaller dataset of HIPASS data](#chapter1.2)
+#     * [Choose dataset to visuelise](#chapter1.2)
 #     * [Scraping url-s where the data of the HIPASS spectra is storred](#chapter1.3)
 #     * [Creating list of HIPASS sources](#chapter1.4)
 #     * [Extracting spectral information from HIPASS database](#chapter1.5)
@@ -187,7 +187,7 @@ ax.yaxis.set_visible(False)
 # <a class="anchor" id="chapter1"></a>
 # # Import HIPASS data
 
-# In[3]:
+# In[70]:
 
 
 # Load galaxy properties from HIPASS data (https://ui.adsabs.harvard.edu/abs/2004MNRAS.350.1195M/abstract)
@@ -196,7 +196,7 @@ HIPASS_data = Table.read('HIPASS_catalog.fit')
 df_hipass = HIPASS_data.to_pandas()
 
 
-# In[56]:
+# In[71]:
 
 
 # Display the dataframe
@@ -208,7 +208,7 @@ df_hipass
 # <a class="anchor" id="chapter1.1"></a>
 # ## Plot the Sky coverage of the HIPASS survey
 
-# In[5]:
+# In[60]:
 
 
 # Plot HIPASS survey
@@ -220,28 +220,85 @@ im = ax.scatter(np.radians(df_hipass['_RAJ2000']-180), np.radians(df_hipass['_DE
 # Adding colorbar for the sources, based on their Velocity
 cb = plt.colorbar(im, orientation = 'horizontal', shrink = 0.8)
 # RVmom ==> Flux-weighted mean velocity of profile clipped at RVlo and RVhi (explained in the online HIPASS table)
-cb.set_label(r'RVmom [km s$^{-1}$]') 
+cb.set_label(r'RVmom [km s$^{-1}$]', size=18) 
 
 
 ax.set_xlabel(r'$\mathrm{RA[\degree]}$')
-ax.xaxis.label.set_fontsize(12)
+ax.xaxis.label.set_fontsize(20)
 ax.set_ylabel(r'$\mathrm{Dec[\degree]}$')
-ax.yaxis.label.set_fontsize(12)
+ax.yaxis.label.set_fontsize(20)
 
 # Invalid value encountered probably because of x limits are +/- Pi which are both singularities on the Mollweide projection.
 
 
 # <a class="anchor" id="chapter1.2"></a>
+# # Choose dataset to visualise
+# ### Type 'True' for the selected dataset
+
+# In[101]:
+
+
+# The 100 most HI massive galaxies from HIPASS  
+the_100_most_massive = 'True'
+
+# The 100 least HI massive galaxies from HIPASS  
+the_100_least_massive = 'False'
+
+# The 100 confused sources from HIPASS  
+the_100_confused = 'False'
+
+
+# In[99]:
+
+
+H0 = 70 # Hubble constant
+# Add distance HI mass to the table
+# These are created by addopting RVmom as the recessional velocity for distance (RVmom * H0) and mass estimation! 
+
+df_hipass['logHI_mass_approx'] = pd.Series(np.log10(2.365*10e5*((df_hipass['RVmom']/H0)**2)*df_hipass['Sint']), index=df_hipass.index)
+df_hipass['Distance_approx'] = pd.Series( (df_hipass['RVmom']/H0), index=df_hipass.index)
+
+if the_100_most_massive == 'True':
+        
+    # Sort original HIPASS dataframe by the HI mass column - from highest to lowest and reset indexing so that we select first 100
+    df_by_mass_dsc = df_hipass.sort_index(by='logHI_mass_approx', ascending=False).reset_index()
+    df_most_HI_massive = df_by_mass_dsc[0:100]
+    df = df_most_HI_massive
+    
+elif the_100_least_massive=='True':
+    # Sort original HIPASS dataframe by the HI mass column - from highest to lowest and reset indexing so that we select first 100
+    df_by_mass_asc = df_hipass.sort_index(by='logHI_mass_approx', ascending=True).reset_index()
+    df_least_HI_massive = df_by_mass_asc[0:100]
+    df = df_least_HI_massive
+    
+elif the_100_confused == 'True':
+    # Sort original HIPASS dataframe by the HI mass column - from highest to lowest and reset indexing so that we select first 100
+    df_conf = df_hipass.sort_index(by='cf', ascending=False).reset_index()
+    df_confused = df_conf[0:100]
+    df = df_confused
+    
+else:
+    print('Error: You either did not selected the dataset or selected multiple datasets')
+    df = 'None'
+
+
+# In[100]:
+
+
+df
+
+
+# <a class="anchor" id="chapter1.2"></a>
 # ## Make a smaller dataset of HIPASS data
 
-# In[57]:
+# In[102]:
 
 
 # For faster download of the optical images and HI spectra, it is recommended to start with smaller sample
 # Pre-compiled 500 takes a long to run (~1hour) from scratch
 # Small sub-sample of the HIPASS data
-df = df_hipass[0:500]
-df
+df_500 = df_hipass[0:500]
+df = df_500
 
 
 # In[7]:
@@ -700,8 +757,9 @@ save(p)
 # <a class="anchor" id="resources"></a>
 # # Resources and references
 
-# #### The HIPASS data (Barnes et al (http://adsabs.harvard.edu/abs/2001MNRAS.322..486B))
-# Data used in this notebook are published by Meyer et al. 2004 https://ui.adsabs.harvard.edu/?#abs/2004MNRAS.350.1195M
+# #### The HIPASS data 
+# Barnes et al (http://adsabs.harvard.edu/abs/2001MNRAS.322..486B)  
+# Data used in this notebook are published by Meyer et al. 2004 https://ui.adsabs.harvard.edu/?#abs/2004MNRAS.350.1195M  
 # 
 # ##### The HIPASS table 
 # Table is obtained through VizieR services: This research has made use of the VizieR catalogue access tool, CDS,  Strasbourg, France (DOI : 10.26093/cds/vizier). The original description of the VizieR service was published in A&AS 143, 23
