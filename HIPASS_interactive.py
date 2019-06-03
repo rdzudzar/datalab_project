@@ -58,11 +58,15 @@ __keywords__ = ['Interactive', 'Neutral Hydrogen', 'Spectra', 'Galaxies','Bokeh'
 # <a class="anchor" id="import"></a>
 # # Imports and setup
 
-# In[2]:
+# In[119]:
 
 
 # std lib
 from getpass import getpass
+import os
+from os import listdir
+import pathlib
+from urllib.error import HTTPError
 
 # 3rd party
 import numpy as np
@@ -71,17 +75,28 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from scipy.stats import binned_statistic_2d
 get_ipython().run_line_magic('matplotlib', 'inline')
+import pandas as pd
+import html5lib
+import requests
+from bs4 import BeautifulSoup
+
+# astropy
 from astropy.table import Table
 from astropy import utils, io, convolution, stats
 from astropy.visualization import make_lupton_rgb
-import pandas as pd
-import html5lib
+from astropy import coordinates, units as u, wcs
+from astropy.coordinates import SkyCoord
+from astroquery.skyview import SkyView
 
  # bokeh
 from bokeh.io import output_notebook
+from bokeh.palettes import BuGn8, viridis
+from bokeh.transform import linear_cmap
+from bokeh.models import ColumnDataSource, ColorBar
 from bokeh.plotting import figure, output_file, show, ColumnDataSource, gridplot, save
-from bokeh.models import HoverTool
+from bokeh.models import HoverTool, BoxSelectTool
 output_notebook()
+
 
 # Data Lab
 from dl import queryClient as qc
@@ -89,7 +104,7 @@ from dl import queryClient as qc
 from dl import authClient as ac, queryClient as qc, storeClient as sc, helpers
 
 
-# In[3]:
+# In[105]:
 
 
 # Python 2/3 compatibility
@@ -105,99 +120,15 @@ token = ac.login('anonymous')
 #token = ac.login(input("Enter user name: "),getpass("Enter password: "))
 
 
-# In[4]:
-
-
-#FROM: DwarfGalaxyDESDR1_20171101.ipynb
-
-# a little function to download the deepest stacked images
-# adapted from R. Nikutta
-def download_deepest_image(ra,dec,fov=0.1,band='g'):
-    imgTable = svc.search((ra,dec), (fov/np.cos(dec*np.pi/180), fov), verbosity=2).to_table()
-    print("The full image list contains", len(imgTable), "entries")
-    
-    sel0 = imgTable['obs_bandpass'].astype(str)==band
-    sel = sel0 & ((imgTable['proctype'].astype(str)=='Stack') & (imgTable['prodtype'].astype(str)=='image')) # basic selection
-    Table = imgTable[sel] # select
-    if (len(Table)>0):
-        row = Table[np.argmax(Table['exptime'].data.data.astype('float'))] # pick image with longest exposure time
-        url = row['access_url'].decode() # get the download URL
-        print ('downloading deepest stacked image...')
-        image = io.fits.getdata(utils.data.download_file(url,cache=True,show_progress=False,timeout=120))
-
-    else:
-        print ('No image available.')
-        image=None
-        
-    return image
-
-# multi panel image plotter
-def plot_images(images,geo=None,panelsize=4,bands=list('gri'),cmap=matplotlib.cm.gray_r):
-    n = len(images)
-    if geo is None: geo = (n,1)
-        
-    fig = plt.figure(figsize=(geo[0]*panelsize,geo[1]*panelsize))
-    for j,img in enumerate(images):
-        ax = fig.add_subplot(geo[1],geo[0],j+1)
-        if img is not None:
-            print(img.min(),img.max())
-            ax.imshow(img,origin='lower',interpolation='none',cmap=cmap,norm=matplotlib.colors.LogNorm(vmin=0.1, vmax=img.max()))
-            ax.set_title('%s band' % bands[j])
-            ax.xaxis.set_visible(False)
-            ax.yaxis.set_visible(False)
-
-
-# In[5]:
-
-
-#SIA
-from pyvo.dal import sia
-DEF_ACCESS_URL = "http://datalab.noao.edu/sia/des_dr1"
-svc = sia.SIAService(DEF_ACCESS_URL)
-
-
-band = 'g'
-#rac=ra[7]
-#decc=dec[7]
-
-rac = df['_RAJ2000'][59]
-decc =  df['_DEJ2000'][59]
-
-gimage = download_deepest_image(rac, decc, fov=0.25, band=band) # FOV in deg
-band = 'r'
-rimage = download_deepest_image(rac, decc, fov=0.25, band=band) # FOV in deg
-band = 'i'
-iimage = download_deepest_image(rac, decc, fov=0.25, band=band) # FOV in deg
-images=[gimage,rimage,iimage]
-
-
-# In[ ]:
-
-
-img = make_lupton_rgb(iimage, rimage, gimage, stretch=50)
-plot_images(images)
-fig = plt.figure(figsize=[12,12])
-ax = fig.add_subplot(1,1,1)
-
-ax.imshow(img,origin='lower')
-ax.xaxis.set_visible(False)
-ax.yaxis.set_visible(False)
-
-
 # <a class="anchor" id="chapter1"></a>
 # # Import HIPASS data
 
-# In[70]:
+# In[248]:
 
 
 # Load galaxy properties from HIPASS data (https://ui.adsabs.harvard.edu/abs/2004MNRAS.350.1195M/abstract)
-from astropy.table import Table
 HIPASS_data = Table.read('HIPASS_catalog.fit')
 df_hipass = HIPASS_data.to_pandas()
-
-
-# In[71]:
-
 
 # Display the dataframe
 df_hipass
@@ -208,7 +139,7 @@ df_hipass
 # <a class="anchor" id="chapter1.1"></a>
 # ## Plot the Sky coverage of the HIPASS survey
 
-# In[60]:
+# In[108]:
 
 
 # Plot HIPASS survey
@@ -235,7 +166,7 @@ ax.yaxis.label.set_fontsize(20)
 # # Choose dataset to visualise
 # ### Type 'True' for the selected dataset
 
-# In[101]:
+# In[226]:
 
 
 # The 100 most HI massive galaxies from HIPASS  
@@ -248,7 +179,42 @@ the_100_least_massive = 'False'
 the_100_confused = 'False'
 
 
-# In[99]:
+# ### Set-up saving folder
+
+# In[227]:
+
+
+# Check needed directories and create them if they dont exist. In these directories HI spectra and optical images will be saved.
+# Check condition of which dataset was chosen and create respective path if they don't exist.
+
+if the_100_most_massive == 'True':
+    pathlib.Path('./HIPASS_spectra_most_massive').mkdir(parents=True, exist_ok=True) 
+    pathlib.Path('./HIPASS_images_most_massive').mkdir(parents=True, exist_ok=True) 
+    spectra_path = './HIPASS_spectra_most_massive/' # Will be used for folder to save spectra
+    images_path = './HIPASS_images_most_massive/' # Will be used for folder to save images
+    interactive = 'most_massive' # Will be used to save hmtl file.
+    
+elif the_100_least_massive == 'True':
+    spectra_path = pathlib.Path('./HIPASS_spectra_least_massive').mkdir(parents=True, exist_ok=True) 
+    images_path = pathlib.Path('./HIPASS_images_least_massive').mkdir(parents=True, exist_ok=True) 
+    spectra_path = './HIPASS_spectra_least_massive/'
+    images_path = './HIPASS_images_least_massive/'
+    interactive = 'least_massive'
+    
+elif the_100_confused == 'True':
+    spectra_path = pathlib.Path('./HIPASS_spectra_confused').mkdir(parents=True, exist_ok=True) 
+    images_path = pathlib.Path('./HIPASS_images_confused').mkdir(parents=True, exist_ok=True) 
+    spectra_path = './HIPASS_spectra_confused/'
+    images_path = './HIPASS_images_confused/'
+    interactive = 'confused'
+    
+else:
+    print("There is an error in selection of the dataset")
+
+
+# ### Approximate HI masses and Distances
+
+# In[228]:
 
 
 H0 = 70 # Hubble constant
@@ -278,42 +244,20 @@ elif the_100_confused == 'True':
     df = df_confused
     
 else:
-    print('Error: You either did not selected the dataset or selected multiple datasets')
+    print('Error: You either did not selected the dataset or you selected multiple datasets')
     df = 'None'
 
 
-# In[100]:
+# In[229]:
 
 
 df
 
 
-# <a class="anchor" id="chapter1.2"></a>
-# ## Make a smaller dataset of HIPASS data
-
-# In[102]:
-
-
-# For faster download of the optical images and HI spectra, it is recommended to start with smaller sample
-# Pre-compiled 500 takes a long to run (~1hour) from scratch
-# Small sub-sample of the HIPASS data
-df_500 = df_hipass[0:500]
-df = df_500
-
-
-# In[7]:
-
-
-import requests
-#mport json
-#rom pandas.io.json import json_normalize
-from bs4 import BeautifulSoup
-
-
 # <a class="anchor" id="chapter1.3"></a>
 # ## Scraping url-s where the data of the HIPASS spectra is storred
 
-# In[8]:
+# In[232]:
 
 
 # Edit url for each galaxy in HIPASS: for making url-s we need: RA, DEC, and a number of the cube from where data was extracted
@@ -347,16 +291,10 @@ for galaxy in range(df.index[0], df.index[0]+len(df)):
     print(s)
 
 
-# In[9]:
-
-
-#http://www.atnf.csiro.au/cgi-bin/multi/release/download.cgi?cubename=/var/www/vhosts/www.atnf.csiro.au/htdocs/research/multibeam/release/MULTI_3_HIDE/PUBLIC/H006_abcde_luther.FELO.imbin.vrd&hann=1&coord=15%3A48%3A13.1%2C-78%3A09%3A16&xrange=-1281%2C12741&xaxis=optical&datasource=hipass&type=ascii
-
-
 # <a class="anchor" id="chapter1.4"></a>
 # ##  Creating list of HIPASS sources
 
-# In[10]:
+# In[234]:
 
 
 # Extract the HIPASS source names from the table; String manipulation is needed to strip certain characters from name 
@@ -374,14 +312,11 @@ print(HIPASS_sources)
 # <a class="anchor" id="chapter1.5"></a>
 # ## Extracting spectral information from HIPASS database
 
-# In[11]:
+# In[235]:
 
 
 # We want to go to each url and extract only the spectra data
 # From each url we need Intensity, Velocity and Channel information
-
-#res = requests.get("http://www.atnf.csiro.au/cgi-bin/multi/release/download.cgi?cubename=/var/www/vhosts/www.atnf.csiro.au/htdocs/research/multibeam/release/MULTI_3_HIDE/PUBLIC/H006_abcde_luther.FELO.imbin.vrd&hann=1&coord=15%3A48%3A13.1%2C-78%3A09%3A16&xrange=2100%2C3100&xaxis=optical&datasource=hipass&type=ascii")
-#res = requests.get("http://www.atnf.csiro.au/cgi-bin/multi/release/download.cgi?cubename=/var/www/vhosts/www.atnf.csiro.au/htdocs/research/multibeam/release/MULTI_3_HIDE/PUBLIC/H006_abcde_luther.FELO.imbin.vrd&hann=1&coord=15%3A48%3A13.1%2C-78%3A09%3A16&xrange=-1281%2C12741&xaxis=optical&datasource=hipass&type=ascii")
 
 #Storring values
 Intensity = []
@@ -428,7 +363,7 @@ for each_galaxy in all_s:
 # <a class="anchor" id="chapter1.6"></a>
 # ## Plotting the HI spectra for each source
 
-# In[40]:
+# In[236]:
 
 
 # Plot the spectra of all sources and save files in a subdirectory - these will be used for interactive examination
@@ -462,31 +397,22 @@ for idx, i in enumerate(range(len(Velocity))):
     ax.get_xaxis().set_tick_params(which = 'both', direction='in', top = True, size = 13)
     
     plt.legend(loc=1, fontsize=20)
-    fig.savefig('./HIPASS_spectra/{0}.png'.format(idx), overwrite=True)
-    #plt.show()
-
-
-# In[13]:
-
-
-from astroquery.vizier import Vizier
+    
+    fig.savefig(spectra_path+'{0}'.format(idx), overwrite=True)
+    plt.close(fig)
+    
+    #plt.show()       
 
 
 # <a class="anchor" id="chapter2"></a>
 # # Query optical counterparts of the HIPASS sources
 
-# In[14]:
+# In[246]:
 
 
 # Using SkyView to get the DSS images of the sources
-#from astroquery.skyview import SkyView
-
-
-# In[15]:
-
-
-#list all available image data which can be obtained from SkyView
-SkyView.list_surveys() 
+# list all available image data which can be obtained from SkyView:
+#SkyView.list_surveys() 
 
 # For DSS: 
 #'Optical:DSS': ['DSS',
@@ -497,30 +423,14 @@ SkyView.list_surveys()
 #                  'DSS2 IR'],
 
 
-# In[16]:
-
-
-from astropy import coordinates, units as u, wcs
-from astropy.coordinates import SkyCoord
-from astroquery.skyview import SkyView
-from astroquery.vizier import Vizier
-import pylab as pl
-
-
 # <a class="anchor" id="chapter2.1"></a>
 # ## Create a list of coordinates
 
-# In[17]:
+# In[241]:
 
 
 # To query Sky position (images) of sources, we need central position of each detection in HIPASS so we extract them using SkyCoord
-
-#c = []
-#for each_galaxy in HIPASS_sources:
-#    center = coordinates.SkyCoord.from_name(each_galaxy)
-#    c.append(center)
-#    #print(center)
-    
+ 
 c = []
 for each_galaxy in df.index:
     center = SkyCoord(df['_RAJ2000'][each_galaxy], df['_DEJ2000'][each_galaxy], frame='icrs', unit="deg")
@@ -532,10 +442,9 @@ for each_galaxy in df.index:
 # ## Download and save images from SkyView
 # ### (This cell takes long to run for large number of sources (~1h for 500))
 
-# In[18]:
+# In[242]:
 
 
-from urllib.error import HTTPError
 TIMEOUT_SECONDS = 36000
 # Get image from the SkyView based on the position
 # Radius of the extracted images is matched to the HIPASS primary beam (~15 arcmin)
@@ -552,7 +461,7 @@ for idx, each_galaxy in enumerate(HIPASS_sources):
         
         # Get image from the SkyView based on coordinates; radius is matched to HIPASS primary beam
         Survey = 'DSS'
-        images = SkyView.get_images(position=center, pixels=[1000,1000], survey=Survey, radius=5*u.arcmin)
+        images = SkyView.get_images(position=center, pixels=[1000,1000], survey=Survey, radius=7.5*u.arcmin)
         
         image = images[0]
         
@@ -578,7 +487,11 @@ for idx, each_galaxy in enumerate(HIPASS_sources):
         #ax.get_yaxis().set_tick_params(which = 'both', direction='in', right = True, size = 8, labelsize=20)
         #ax.get_xaxis().set_tick_params(which = 'both', direction='in', top = True, size = 8)
     
-        fig.savefig('./HIPASS_images/{0}.png'.format(idx), overwrite=True)
+        #fig.savefig('./HIPASS_images/{0}.png'.format(idx), overwrite=True)
+        
+        fig.savefig(images_path+'{0}'.format(idx), overwrite=True)
+        #plt.show() 
+        plt.close(fig)
         
     except HTTPError:
         print('Image not found in the {0} filter'.format(Survey))
@@ -591,26 +504,17 @@ for idx, each_galaxy in enumerate(HIPASS_sources):
 # <a class="anchor" id="chapter3"></a>
 # # Setting up Bokeh for interactive examination
 
-# In[58]:
-
-
-from bokeh.plotting import figure, output_file, show, ColumnDataSource, gridplot, save
-from bokeh.models import HoverTool, BoxSelectTool
-output_notebook()
-
-
 # <a class="anchor" id="chapter3.1"></a>
 # ### Extracting/Sorting images and spectra which we have
 
-# In[20]:
+# In[244]:
 
 
 # Check files in the downloaded folder and play around with the strings to sort them and extract
 
-from os import listdir
-
 extension = '.png'
-mypath = r'./HIPASS_images/'
+mypath_images = images_path # Either images_path or spectra_path since the numbering and length should be the same.
+
 # Get all the files from a directory with extension
 files_with_extension = [ f for f in listdir(mypath) if f[(len(f) - len(extension)):len(f)].find(extension)>=0 ]
 # Strip the extension from the files
@@ -626,31 +530,17 @@ sorted_list_of_images = sorted(raw_image_indices)
 new_list_sorted = []
 new_list_images = []
 for i in sorted_list_of_images:
-    New_list_s = './HIPASS_spectra/'+str(i)+'.png'
-    New_list_i = './HIPASS_images/'+str(i)+'.png'
+    New_list_s = spectra_path+str(i)+'.png'
+    New_list_i = images_path+str(i)+'.png'
     new_list_sorted.append(New_list_s)
     new_list_images.append(New_list_i)
 #print(new_list_sorted)
 
 
-# <a class="anchor" id="chapter3.2"></a>
-# ### Approximate Distance and HI mass
-
-# In[21]:
-
-
-# HI mass approximation only! here we assume RVmom is recessional velocity!
-# Also using approximate distance as: RVmom * H0
-
-H0 = 70 # Hubble constant
-Distance = df['RVmom']/H0
-HI_mass = np.log10(2.365*10e5*(Distance**2)*df['Sint'])
-
-
 # <a class="anchor" id="chapter4"></a>
 # # Interactive visualization with Bokeh
 
-# In[55]:
+# In[245]:
 
 
 # Add bokeh features
@@ -659,15 +549,11 @@ HI_mass = np.log10(2.365*10e5*(Distance**2)*df['Sint'])
 # as spectra and imgs -- we will have spectrum image and optical image for each source as we hover above plotted points
 # Depending on the speed of your internet, when first time hovering on points - wait a couple of seconds for images to appear
 
-import matplotlib as mpl
-from bokeh.palettes import BuGn8, viridis
-from bokeh.transform import linear_cmap
-from bokeh.models import ColumnDataSource, ColorBar
 
 source = ColumnDataSource(
         data=dict(
-            x = Distance,
-            y = HI_mass, 
+            x = df['Distance_approx'],
+            y = df['logHI_mass_approx'], 
             z = df['W20max'],
             desc = HIPASS_sources ,
             confused = df['cf'],
@@ -675,7 +561,7 @@ source = ColumnDataSource(
             spectra = new_list_sorted,
             imgs = new_list_images,))
 
-# Adding html code to say how the images and source name will be displayed
+# Adding html code to say how the images, spectra and other information will be displayed when one hover on points
 hover = HoverTool(    tooltips="""
     <div>
         <div>
@@ -750,7 +636,7 @@ p.axis.minor_tick_out = 0
 show(p)
 
 # Save as html file and then open in browser to visualize
-output_file('HIPASS_interactive_search.html', mode='inline')
+output_file('HIPASS_interactive_{0}_search.html'.format(interactive), mode='inline')
 save(p)
 
 
