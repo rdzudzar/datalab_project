@@ -107,6 +107,13 @@ from dl import authClient as ac, queryClient as qc, storeClient as sc, helpers
 # In[3]:
 
 
+import bs4
+bs4.__version__
+
+
+# In[4]:
+
+
 # Python 2/3 compatibility
 try:
     input = raw_input
@@ -123,7 +130,7 @@ token = ac.login('anonymous')
 # <a class="anchor" id="chapter1"></a>
 # # Import HIPASS data
 
-# In[4]:
+# In[5]:
 
 
 # Load galaxy properties from HIPASS data (https://ui.adsabs.harvard.edu/abs/2004MNRAS.350.1195M/abstract)
@@ -139,7 +146,7 @@ df_hipass
 # <a class="anchor" id="chapter1.1"></a>
 # ## Plot the Sky coverage of the HIPASS survey
 
-# In[5]:
+# In[6]:
 
 
 # Plot HIPASS survey
@@ -167,7 +174,7 @@ ax.yaxis.label.set_fontsize(20)
 # ### Type 'True' for the selected dataset and type number of galaxies you want to see (default 100)
 # Please be aware that depending on the internet, you might need a long time to proccess the notebook with large number of galaxies.
 
-# In[6]:
+# In[7]:
 
 
 # Add your number of source here if you wish to change it.
@@ -186,7 +193,7 @@ the_confused = 'False'
 
 # ### Set saving folders
 
-# In[7]:
+# In[8]:
 
 
 # Check condition of which dataset was chosen and create respective path if they don't exist.
@@ -215,7 +222,7 @@ interactive = selected # Will be used to save hmtl file.
 
 # ### Create the dataframe based on the selected conditions
 
-# In[8]:
+# In[9]:
 
 
 H0 = 70 # Hubble constant
@@ -247,7 +254,7 @@ df_selected = df_selected[0:Number_of_sources] # Getting the specific number of 
 df = df_selected # Save new dataframe
 
 
-# In[9]:
+# In[10]:
 
 
 df
@@ -256,7 +263,7 @@ df
 # <a class="anchor" id="chapter1.3"></a>
 # ## Scraping url-s where the data of the HIPASS spectra is storred
 
-# In[10]:
+# In[11]:
 
 
 # Edit url for each galaxy in HIPASS: for making url-s we need: RA, DEC, and a number of the cube from where data was extracted
@@ -293,7 +300,7 @@ for galaxy in tqdm(range(df.index[0], df.index[0]+len(df))):
 # <a class="anchor" id="chapter1.4"></a>
 # ##  Creating list of HIPASS sources
 
-# In[11]:
+# In[12]:
 
 
 # Extract the HIPASS source names from the table; String manipulation is needed to strip certain characters from name 
@@ -311,7 +318,7 @@ print(HIPASS_sources)
 # <a class="anchor" id="chapter1.5"></a>
 # ## Extracting spectral information from the HIPASS database
 
-# In[12]:
+# In[13]:
 
 
 # We want to go to each url and extract only the spectra data
@@ -362,7 +369,7 @@ for each_galaxy in tqdm(all_s):
 # <a class="anchor" id="chapter1.6"></a>
 # ## Plotting the HI spectra for each source
 
-# In[13]:
+# In[14]:
 
 
 # Plot the spectra of all sources and save files in a subdirectory - these will be used for interactive examination
@@ -405,12 +412,12 @@ for idx, i in tqdm(enumerate(range(len(Velocity)))):
 # <a class="anchor" id="chapter2"></a>
 # # Query optical counterparts of the HIPASS sources
 
-# In[14]:
+# In[15]:
 
 
 # Using SkyView to get the DSS images of the sources
 # list all available image data which can be obtained from SkyView:
-#SkyView.list_surveys() 
+SkyView.list_surveys() 
 
 # For DSS: 
 #'Optical:DSS': ['DSS',
@@ -424,7 +431,7 @@ for idx, i in tqdm(enumerate(range(len(Velocity)))):
 # <a class="anchor" id="chapter2.1"></a>
 # ## Create a list of coordinates
 
-# In[15]:
+# In[16]:
 
 
 # To query Sky position (images) of sources, we need central position of each detection in HIPASS so we extract them using SkyCoord
@@ -440,7 +447,7 @@ for each_galaxy in df.index:
 # ## Download and save images from SkyView
 # ### (Depending on the internet this cell takes longer to run. For 500 sources is around 1h)
 
-# In[16]:
+# In[17]:
 
 
 TIMEOUT_SECONDS = 36000
@@ -455,7 +462,8 @@ for idx, each_galaxy in tqdm(enumerate(HIPASS_sources)):
 # Encountering  HTTPError when the position of the source is not in the image database, then it will be skipped and user will be notified   
     try:
         # Get coordinates
-        center = coordinates.SkyCoord.from_name(each_galaxy)
+        #center = coordinates.SkyCoord.from_name(each_galaxy) # from_name option is not always working!!
+        center = (c[idx]) #get centres from the coordinates 
         
         # Get image from the SkyView based on coordinates; radius is matched to HIPASS primary beam
         Survey = 'DSS'
@@ -505,7 +513,7 @@ for idx, each_galaxy in tqdm(enumerate(HIPASS_sources)):
 # <a class="anchor" id="chapter3.1"></a>
 # ### Extracting/Sorting images and spectra which we have
 
-# In[17]:
+# In[18]:
 
 
 # Check files in the downloaded folder and play around with the strings to sort them and extract
@@ -541,6 +549,14 @@ for i in sorted_list_of_images:
 # In[19]:
 
 
+from bokeh.embed import components
+from bokeh.embed import autoload_static
+from bokeh.resources import CDN
+
+
+# In[21]:
+
+
 # Add bokeh features
 # We are plotting x and y data
 # As desc - description - we will have name of the object
@@ -573,8 +589,8 @@ hover = HoverTool(    tooltips="""
         
             <table>
             <tr>
-            <td><img src="@imgs" width="300" /></td>
-            <td><img src="@spectra" width="230" />                
+            <td><img src="@imgs" width="350" /></td>
+            <td><img src="@spectra" width="330" />                
             
             <center>
             </div>
@@ -651,6 +667,21 @@ show(p)
 
 # For better performance, open the saved .html document!
 
+#script, div = components(p)
+#print(script)
+#print(div)
+
+script, div = components(p)
+script = '\n'.join(['#+HTML_HEAD_EXTRA: ' + line for line in script.split('\n')])
+
+#print( '''{script}
+#
+##+BEGIN_HTML
+#<a name="figure"></a>
+#{div}
+##+END_HTML
+#'''.format(script=script, div=div) )
+
 
 # <a class="anchor" id="resources"></a>
 # # Resources and references
@@ -676,6 +707,7 @@ show(p)
 # Pandas The official documentation is hosted on PyData.org: https://pandas.pydata.org/pandas-docs/stable   
 # Bokeh : Bokeh Development Team (2018). Bokeh: Python library for interactive visualization URL http://www.bokeh.pydata.org.  
 # Matplotlib (Hunter el al. 2007, doi: 10.1109/MCSE.2007.55) http://matplotlib.org/  
+# Astroquery https://astroquery.readthedocs.io/en/latest/  
 # Numpy (van der Walt 2011, doi: 10.1109/MCSE.2011.37) http://www.numpy.org/  
 # Requests (Copyright 2018 Kenneth Reitz), https://2.python-requests.org/en/master/  
 # tqdm: https://github.com/tqdm  
