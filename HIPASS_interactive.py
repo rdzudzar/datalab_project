@@ -57,7 +57,7 @@ __keywords__ = ['extragalactic', 'interactive plot', 'spectra', 'galaxies','imag
 # <a class="anchor" id="import"></a>
 # # Imports and setup
 
-# In[2]:
+# In[20]:
 
 
 # std lib
@@ -92,12 +92,11 @@ from bokeh.plotting import figure, output_file, show, ColumnDataSource, save
 from bokeh.models import HoverTool, BoxSelectTool
 output_notebook()
 
-
 # Data Lab
 from dl import authClient as ac
 
 
-# In[3]:
+# In[19]:
 
 
 # Python 2/3 compatibility
@@ -106,20 +105,22 @@ try:
 except NameError:
     pass
 # Either get token for anonymous user
-#token = ac.login('anonymous')
+token = ac.login('anonymous')
 
 # ... or for authenticated user
-token = ac.login(input("Enter user name: "),getpass("Enter password: "))
+#token = ac.login(input("Enter user name: "),getpass("Enter password: "))
 
 
 # <a class="anchor" id="chapter1"></a>
 # # Import HIPASS data
 
-# In[4]:
+# In[21]:
 
 
 # Load galaxy properties from HIPASS data (https://ui.adsabs.harvard.edu/abs/2004MNRAS.350.1195M/abstract)
 HIPASS_data = Table.read('HIPASS_catalog.fit')
+
+# Store HIPASS.fit table into Pandas dataframe
 df_hipass = HIPASS_data.to_pandas()
 
 # Display the dataframe head to see partial content
@@ -129,13 +130,14 @@ df_hipass.head()
 # <a class="anchor" id="chapter1.1"></a>
 # ## Plot the Sky coverage of the HIPASS survey
 
-# In[5]:
+# In[22]:
 
 
 # Plot HIPASS survey
 
-fig = plt.figure(figsize=(14,14)) 
-ax = fig.add_subplot(111, projection="mollweide") # Using mollweide projection
+fig = plt.figure(figsize=(14,14))
+# Using mollweide projection
+ax = fig.add_subplot(111, projection="mollweide") 
 # Converting RA and DEC from deg to radians
 im = ax.scatter(np.radians(df_hipass['_RAJ2000']-180), np.radians(df_hipass['_DEJ2000']), c=df_hipass['RVmom'], cmap='viridis', s=20)
 # Adding colorbar for the sources, based on their Velocity
@@ -143,7 +145,7 @@ cb = plt.colorbar(im, orientation = 'horizontal', shrink = 0.8)
 # RVmom ==> Flux-weighted mean velocity of profile clipped at RVlo and RVhi (explained in the online HIPASS table)
 cb.set_label(r'RVmom [km s$^{-1}$]', size=18) 
 
-
+# Add axis labels and label sizes
 ax.set_xlabel(r'$\mathrm{RA[\degree]}$')
 ax.xaxis.label.set_fontsize(20)
 ax.set_ylabel(r'$\mathrm{Dec[\degree]}$')
@@ -157,7 +159,7 @@ ax.yaxis.label.set_fontsize(20)
 # ### Type 'True' for the selected dataset and type number of galaxies you want to see (default 10)
 # Please be aware that depending on the internet, you might need a long time to proccess the notebook with large number of galaxies.
 
-# In[6]:
+# In[23]:
 
 
 # Add your number of source here if you wish to change it.
@@ -170,17 +172,17 @@ the_most_massive = 'True'
 the_least_massive = 'False'
 
 # The 100 confused sources from HIPASS (max 333)
-
 the_confused = 'False'
 
 
 # ### Set saving folders
 
-# In[7]:
+# In[24]:
 
 
 # Check condition of which dataset was chosen and create respective path if they don't exist.
 # And then check needed directories and create them if they dont exist. In these directories HI spectra and optical images will be saved.
+
 # Conditions 
 if the_most_massive == 'True':
     selected = 'most_massive'
@@ -211,7 +213,6 @@ interactive = selected # Will be used to save hmtl file.
 H0 = 70 # Hubble constant
 # Add distance HI mass to the table
 # These are created by addopting RVmom as the recessional velocity for distance (RVmom * H0) and mass estimation! 
-
 df_hipass['logHI_mass_approx'] = pd.Series(np.log10(2.365*10e5*((df_hipass['RVmom']/H0)**2)*df_hipass['Sint']), index=df_hipass.index)
 df_hipass['Distance_approx'] = pd.Series( (df_hipass['RVmom']/H0), index=df_hipass.index)
 
@@ -247,7 +248,7 @@ df.head()
 # <a class="anchor" id="chapter1.3"></a>
 # ## Scraping url-s where the data of the HIPASS spectra is storred
 
-# In[10]:
+# In[25]:
 
 
 # Edit url for each galaxy in HIPASS: for making url-s we need: RA, DEC, and a number of the cube from where data was extracted
@@ -275,7 +276,7 @@ for galaxy in tqdm(range(df.index[0], df.index[0]+len(df))):
          str(cube),  
          str(df['RAJ2000'][galaxy])[2:4], str(df['RAJ2000'][galaxy])[5:7], 
          str(df['RAJ2000'][galaxy])[8:10], str(df['DEJ2000'][galaxy])[2:5], str(df['DEJ2000'][galaxy])[6:8], str(df['DEJ2000'][galaxy])[9:11] ) )
-    all_s.append(s)
+    all_s.append(s) # Store each url to the 'all_s'
 
 
 # <a class="anchor" id="chapter1.4"></a>
@@ -298,7 +299,7 @@ for galaxy_name in range(df.index[0], df.index[0]+len(df)):
 # <a class="anchor" id="chapter1.5"></a>
 # ## Extracting spectral information from the HIPASS database
 
-# In[12]:
+# In[26]:
 
 
 # We want to go to each url and extract only the spectra data
@@ -331,6 +332,7 @@ for each_galaxy in tqdm(all_s):
     Vel = []
     Int = []
     # We know where the required informations are storred so we are just extracting certain characters
+    # This information for the channel/velocity and intensity is always the same at the HIPASS database
     for i in a:
         Chan.append(i[1:12])
         Vel.append(i[17:33])
@@ -340,6 +342,8 @@ for each_galaxy in tqdm(all_s):
     I = [float(i) for i in Int]
     C = [float(i) for i in Chan]
     V = [float(i) for i in Vel]
+    
+    # Store all information for each galaxy as: Intensity, Velocity and Channel
     Intensity.append(I)
     Velocity.append(V)
     Channel.append(C)
@@ -382,10 +386,9 @@ for idx, i in tqdm(enumerate(range(len(Velocity)))):
     ax.get_xaxis().set_tick_params(which = 'both', direction='in', top = True, size = 13)
     # Plot legend
     plt.legend(loc=1, fontsize=20)
-    # Save plots
+    # Save plots in the spectra_path as numbered from 0 to the limit which you selected (default up to 9)
     fig.savefig(spectra_path+'{0}'.format(idx), overwrite=True)
     plt.close(fig)
-    
 
 
 # <a class="anchor" id="chapter2"></a>
