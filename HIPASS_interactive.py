@@ -5,9 +5,12 @@
 
 
 __author__ = 'Robert Dzudzar <robertdzudzar@gmail.com>, <rdzudzar@swin.edu.au>'
-__version__ = '20190615' # yyyymmdd; version datestamp of this notebook
+__version__ = '20190630' # yyyymmdd; version datestamp of this notebook
 __keywords__ = ['extragalactic', 'interactive plot', 'spectra', 'galaxies','image cutout']
 
+
+# ## Original notebook can be accessed through: http://datalab.noao.edu/
+# ###  https://github.com/noaodatalab/notebooks-latest
 
 # # Interactively examining the HI Parkes All Sky Survey (HIPASS)
 # *Robert Dzudzar*
@@ -16,7 +19,6 @@ __keywords__ = ['extragalactic', 'interactive plot', 'spectra', 'galaxies','imag
 # * [Goals & notebook summary](#goals)
 # * [Disclaimer & Attribution](#attribution)
 # * [Imports & setup](#import)
-# * [Authentication](#auth)  
 # 
 # * #### [Import HIPASS data](#chapter1)
 #     * [Plot the Sky coverage of the HIPASS survey](#chapter1.1)
@@ -31,7 +33,7 @@ __keywords__ = ['extragalactic', 'interactive plot', 'spectra', 'galaxies','imag
 #     * [Download and save images from SkyView](#chapter2.2)  
 # 
 # * #### [Setting up Bokeh for interactive examination](#chapter3)
-#     * [Extracting/Sorting images and spectra which we have](#chapter3.1)
+#     * [Extracting and sorting images, and spectra](#chapter3.1)
 #     * [Approximate Distance and HI mass](#chapter3.2)  
 # 
 # * #### [Interactive visualization with Bokeh](#chapter4)  
@@ -57,7 +59,7 @@ __keywords__ = ['extragalactic', 'interactive plot', 'spectra', 'galaxies','imag
 # <a class="anchor" id="import"></a>
 # # Imports and setup
 
-# In[20]:
+# In[2]:
 
 
 # std lib
@@ -87,34 +89,15 @@ from astroquery.skyview import SkyView
 from bokeh.io import output_notebook
 from bokeh.palettes import BuGn8, viridis
 from bokeh.transform import linear_cmap
-from bokeh.models import ColumnDataSource, ColorBar
+from bokeh.models import ColumnDataSource, ColorBar, HoverTool, BoxSelectTool
 from bokeh.plotting import figure, output_file, show, ColumnDataSource, save
-from bokeh.models import HoverTool, BoxSelectTool
 output_notebook()
-
-# Data Lab
-from dl import authClient as ac
-
-
-# In[19]:
-
-
-# Python 2/3 compatibility
-try:
-    input = raw_input
-except NameError:
-    pass
-# Either get token for anonymous user
-token = ac.login('anonymous')
-
-# ... or for authenticated user
-#token = ac.login(input("Enter user name: "),getpass("Enter password: "))
 
 
 # <a class="anchor" id="chapter1"></a>
 # # Import HIPASS data
 
-# In[21]:
+# In[3]:
 
 
 # Load galaxy properties from HIPASS data (https://ui.adsabs.harvard.edu/abs/2004MNRAS.350.1195M/abstract)
@@ -130,7 +113,7 @@ df_hipass.head()
 # <a class="anchor" id="chapter1.1"></a>
 # ## Plot the Sky coverage of the HIPASS survey
 
-# In[22]:
+# In[4]:
 
 
 # Plot HIPASS survey
@@ -147,9 +130,9 @@ cb.set_label(r'RVmom [km s$^{-1}$]', size=18)
 
 # Add axis labels and label sizes
 ax.set_xlabel(r'$\mathrm{RA[\degree]}$')
-ax.xaxis.label.set_fontsize(20)
+ax.xaxis.label.set_fontsize(22)
 ax.set_ylabel(r'$\mathrm{Dec[\degree]}$')
-ax.yaxis.label.set_fontsize(20)
+ax.yaxis.label.set_fontsize(22)
 
 # Invalid value encountered probably because of x limits are +/- Pi which are both singularities on the Mollweide projection.
 
@@ -159,55 +142,54 @@ ax.yaxis.label.set_fontsize(20)
 # ### Type 'True' for the selected dataset and type number of galaxies you want to see (default 10)
 # Please be aware that depending on the internet, you might need a long time to proccess the notebook with large number of galaxies.
 
-# In[23]:
+# In[5]:
 
 
 # Add your number of source here if you wish to change it.
 Number_of_sources = 10
 
-# The 100 most HI massive galaxies from HIPASS  
+# The 10 most HI massive galaxies from HIPASS  
 the_most_massive = 'True'
 
-# The 100 least HI massive galaxies from HIPASS  
+# The 10 least HI massive galaxies from HIPASS  
 the_least_massive = 'False'
 
-# The 100 confused sources from HIPASS (max 333)
+# The 10 confused sources from HIPASS (max 333)
 the_confused = 'False'
 
 
 # ### Set saving folders
 
-# In[24]:
+# In[6]:
 
 
 # Check condition of which dataset was chosen and create respective path if they don't exist.
 # And then check needed directories and create them if they dont exist. In these directories HI spectra and optical images will be saved.
 
 # Conditions 
-if the_most_massive == 'True':
+if ( (the_most_massive == 'True') & (the_least_massive == 'False') & (the_confused == 'False')):
     selected = 'most_massive'
     
-elif the_least_massive == 'True':    
+elif ( (the_least_massive == 'True') & (the_most_massive == 'False') & (the_confused == 'False')):    
     selected = 'least_massive'
     
-elif the_confused == 'True':
+elif ( (the_confused == 'True') & (the_least_massive == 'False') & (the_most_massive == 'False')):
     selected = 'confused'
 
 else:
-    print("There is an error in selection of the dataset. Check what you selected.")
+    print("There is an error in the selection of the dataset. Check whether you selected only one dataset to be 'True'.")
 
-# Check directories
+# Check and create directories
 pathlib.Path('./HIPASS_spectra_'+(selected)+'/').mkdir(parents=True, exist_ok=True) # Check if present; If not - creat it.
 pathlib.Path('./HIPASS_images_'+(selected)+'/').mkdir(parents=True, exist_ok=True) 
 spectra_path = './HIPASS_spectra_'+(selected)+'/' # Will be used for folder to save spectra
 images_path = './HIPASS_images_'+(selected)+'/' # Wi1ll be used for folder to save images
 interactive = selected # Will be used to save hmtl file.
-    
 
 
 # ### Create the dataframe based on the selected conditions
 
-# In[8]:
+# In[7]:
 
 
 H0 = 70 # Hubble constant
@@ -238,7 +220,7 @@ df_selected = df_selected[0:Number_of_sources] # Getting the specific number of 
 df = df_selected # Save new dataframe
 
 
-# In[9]:
+# In[8]:
 
 
 # Display the sorted dataframe head to see partial content
@@ -248,7 +230,7 @@ df.head()
 # <a class="anchor" id="chapter1.3"></a>
 # ## Scraping url-s where the data of the HIPASS spectra is storred
 
-# In[25]:
+# In[9]:
 
 
 # Edit url for each galaxy in HIPASS: for making url-s we need: RA, DEC, and a number of the cube from where data was extracted
@@ -282,7 +264,7 @@ for galaxy in tqdm(range(df.index[0], df.index[0]+len(df))):
 # <a class="anchor" id="chapter1.4"></a>
 # ##  Creating list of HIPASS sources
 
-# In[11]:
+# In[10]:
 
 
 # Extract the HIPASS source names from the table; String manipulation is needed to strip certain characters from name 
@@ -299,7 +281,7 @@ for galaxy_name in range(df.index[0], df.index[0]+len(df)):
 # <a class="anchor" id="chapter1.5"></a>
 # ## Extracting spectral information from the HIPASS database
 
-# In[26]:
+# In[11]:
 
 
 # We want to go to each url and extract only the spectra data
@@ -353,13 +335,13 @@ for each_galaxy in tqdm(all_s):
 # <a class="anchor" id="chapter1.6"></a>
 # ## Plotting the HI spectra for each source
 
-# In[13]:
+# In[12]:
 
 
 # Plot the spectra of all sources and save files in a subdirectory - these will be used for interactive examination
 # For each source that was extracted
 store_indices = []
-for idx, i in tqdm(enumerate(range(len(Velocity)))):
+for idx, i in enumerate(range(len(Velocity))):
     store_indices.append(idx)
     fig = plt.figure(figsize=(8,7))                                                               
     ax = fig.add_subplot(1,1,1)
@@ -386,8 +368,13 @@ for idx, i in tqdm(enumerate(range(len(Velocity)))):
     ax.get_xaxis().set_tick_params(which = 'both', direction='in', top = True, size = 13)
     # Plot legend
     plt.legend(loc=1, fontsize=20)
-    # Save plots in the spectra_path as numbered from 0 to the limit which you selected (default up to 9)
-    fig.savefig(spectra_path+'{0}'.format(idx), overwrite=True)
+
+    # Save plots in the spectra_path as numbered from 0000 , using this format because it's needed for files to be sorted
+    # Default names will be from 0000 up to 0009 - 10 files selected; 
+    
+    fig.savefig(spectra_path+'{0}.png'.format(idx), overwrite=True)
+
+    
     plt.close(fig)
 
 
@@ -396,7 +383,7 @@ for idx, i in tqdm(enumerate(range(len(Velocity)))):
 # <a class="anchor" id="chapter2.1"></a>
 # ### Create a list of coordinates
 
-# In[14]:
+# In[13]:
 
 
 # To query Sky position (images) of sources, we need central position of each detection in HIPASS so we extract them using SkyCoord
@@ -410,7 +397,7 @@ for each_galaxy in df.index:
 # ## Download and save images from SkyView
 # ### (Depending on the internet this cell takes longer to run. ~500 sources takes around 1h)
 
-# In[15]:
+# In[14]:
 
 
 TIMEOUT_SECONDS = 36000
@@ -419,7 +406,7 @@ TIMEOUT_SECONDS = 36000
 # Attention --- Not all HIPASS sources are clearly identified, since the beam is 15 arcmin there are confused sources - thus
 # possible optical counterpart will be off center in the optical image
 
-for idx, each_galaxy in tqdm(enumerate(HIPASS_sources)):
+for idx, each_galaxy in enumerate(HIPASS_sources):
 
 # Encountering  HTTPError when the position of the source is not in the image database, then it will be skipped and user will be notified   
     try:
@@ -453,7 +440,12 @@ for idx, each_galaxy in tqdm(enumerate(HIPASS_sources)):
                   norm=plt.matplotlib.colors.LogNorm())
         matplotlib.rcParams.update({'font.size': 22})
         # Save optical image
-        fig.savefig(images_path+'{0}'.format(idx), overwrite=True)
+        # Save plots in the imqt3w_path as numbered from 0000 , using this format because it's needed for files to be sorted
+        # Default names will be from 0000 up to 0009 - for 10 selected files; 
+    
+        fig.savefig(images_path+'{0}.png'.format(idx), overwrite=True)
+
+        
         plt.close(fig)
         
     except HTTPError:
@@ -464,7 +456,7 @@ for idx, each_galaxy in tqdm(enumerate(HIPASS_sources)):
 # <a class="anchor" id="chapter3"></a>
 # # Setting up Bokeh for interactive examination
 # <a class="anchor" id="chapter3.1"></a>
-# ### Extracting/Sorting images and spectra which we have
+# ### Extracting and sorting images, and spectra
 
 # In[16]:
 
@@ -486,13 +478,13 @@ sorted_list_of_images = sorted(raw_image_indices)
 
 # For the new created list we are adding now image/spectra location and .png
 # We create new arrays with the files
-new_list_sorted = []
-new_list_images = []
+list_spectra = []
+list_images = []
 for i in sorted_list_of_images:
     New_list_s = spectra_path+str(i)+'.png'
     New_list_i = images_path+str(i)+'.png'
-    new_list_sorted.append(New_list_s)
-    new_list_images.append(New_list_i)
+    list_spectra.append(New_list_s)
+    list_images.append(New_list_i)
 
 
 # <a class="anchor" id="chapter4"></a>
@@ -517,14 +509,14 @@ source = ColumnDataSource(
             confused = df['cf'], # Confused/Non-confused statement in the hover
             ra_obj = df['_RAJ2000'], # RA of the source in the hover
             dec_obj = df['_DEJ2000'], # DEC of the source in the hover
-            spectra = new_list_sorted, # Spectrum image in the hover
-            imgs = new_list_images,)) # Optical image in the hover
+            spectra = list_spectra, # Spectrum image in the hover
+            imgs = list_images,)) # Optical image in the hover
 
 # Adding html code to say how the images, spectra and other information will be displayed when one hover on points
 # Important things to notice here is connection to the source above. When you want to use specific item from the source, you 
 # link it to the hover belov with: @item_name
 # Other information is .hyml code to sort how the data will be displayed. 
-# If bokeh hover tool is used without image display - hover can be simpla and in that case .html code is not necessary.
+# If bokeh hover tool is used without image display - .html code is not necessary.
 
 hover = HoverTool(    tooltips="""
     <div>
@@ -562,7 +554,7 @@ hover = HoverTool(    tooltips="""
         
 # Define figure size (width/height), assign tools (plot options, zoom, point selection, hover) and give name
 p = figure(plot_width=700, plot_height=700, tools=[hover, "pan,wheel_zoom,box_zoom,reset"], 
-           title="The HI Parkes All Sky Survey", toolbar_location="above")
+           title="{0} galaxies from HIPASS".format(Number_of_sources), toolbar_location="above")
 
 # Define axis labels and properties
 p.xaxis.axis_label = 'Distance [Mpc]'
@@ -589,8 +581,8 @@ p.axis.major_tick_in = 12
 p.axis.minor_tick_in = 6
 p.axis.minor_tick_out = 0
 
-# Save as html file and then open in browser to visualize
-output_file('HIPASS_interactive_{0}.html'.format(interactive), mode='inline')
+# Save as html file into VOSpace and then open in browser to visualize
+output_file('HIPASS_interactive_'+str(interactive)+'.html', mode='inline')
 save(p)
 
 # Show in interactive plot in the notebook.
@@ -602,6 +594,9 @@ show(p)
 # <a class="anchor" id="resources"></a>
 # # Resources and references
 
+# #### Acknowledgements
+# Author would like to thank Robert Nikutta and Manodeep Sinha for their usefull comments and suggestions on this notebook.
+# 
 # #### The HIPASS data 
 # Barnes et al (http://adsabs.harvard.edu/abs/2001MNRAS.322..486B)  
 # Data used in this notebook are published by Meyer et al. 2004 https://ui.adsabs.harvard.edu/?#abs/2004MNRAS.350.1195M  
