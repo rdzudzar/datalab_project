@@ -139,45 +139,52 @@ ax.yaxis.label.set_fontsize(22)
 
 # <a class="anchor" id="chapter1.2"></a>
 # # Choose dataset to visualise
-# ### Type 'True' for the selected dataset and type number of galaxies you want to see (default 10)
+# ### Default 'selected = 'most_massive' - the selected dataset is 'most_massive' and 'Number_of_sources = 10' which selects 10 galaxies
 # Please be aware that depending on the internet, you might need a long time to proccess the notebook with large number of galaxies.
+# max(Number_of_sources) for confused sources is 333; otherwise it is 4315
 
-# In[5]:
+# In[19]:
 
 
-# Add your number of source here if you wish to change it.
 Number_of_sources = 10
 
-# The 10 most HI massive galaxies from HIPASS  
-the_most_massive = 'True'
+# Assign only one of the following: 'most_massive', 'least_massive', 'confused'
 
-# The 10 least HI massive galaxies from HIPASS  
-the_least_massive = 'False'
+selected = 'most_massive'
 
-# The 10 confused sources from HIPASS (max 333)
-the_confused = 'False'
+# For example, if selected = 'most_massive' it will compute sub-sample of the X most massive galaxies, where X
+# is the Number_of sources; if you type selected = 'least_massive' it will do the same for the X least massive sources
+
+
+# In[20]:
+
+
+# Report an error if 'selected' is wrong
+
+possible_selection = set(['most_massive', 'least_massive', 'confused'])
+
+if selected not in possible_selection:
+    print('There is an error in your selection. Please check \'selected\' in the cell above.')
+
+
+# In[21]:
+
+
+# Create a dictionary with possible selections 
+select_dict = {
+  'most_massive' : (False, 'logHI_mass_approx'),
+  'least_massive' : (True, 'logHI_mass_approx'),
+  'confused' : (False, 'cf')
+}
 
 
 # ### Set saving folders
 
-# In[6]:
+# In[22]:
 
 
 # Check condition of which dataset was chosen and create respective path if they don't exist.
 # And then check needed directories and create them if they dont exist. In these directories HI spectra and optical images will be saved.
-
-# Conditions 
-if ( (the_most_massive == 'True') & (the_least_massive == 'False') & (the_confused == 'False')):
-    selected = 'most_massive'
-    
-elif ( (the_least_massive == 'True') & (the_most_massive == 'False') & (the_confused == 'False')):    
-    selected = 'least_massive'
-    
-elif ( (the_confused == 'True') & (the_least_massive == 'False') & (the_most_massive == 'False')):
-    selected = 'confused'
-
-else:
-    print("There is an error in the selection of the dataset. Check whether you selected only one dataset to be 'True'.")
 
 # Check and create directories
 pathlib.Path('./HIPASS_spectra_'+(selected)+'/').mkdir(parents=True, exist_ok=True) # Check if present; If not - creat it.
@@ -189,7 +196,7 @@ interactive = selected # Will be used to save hmtl file.
 
 # ### Create the dataframe based on the selected conditions
 
-# In[7]:
+# In[23]:
 
 
 H0 = 70 # Hubble constant
@@ -198,21 +205,9 @@ H0 = 70 # Hubble constant
 df_hipass['logHI_mass_approx'] = pd.Series(np.log10(2.365*10e5*((df_hipass['RVmom']/H0)**2)*df_hipass['Sint']), index=df_hipass.index)
 df_hipass['Distance_approx'] = pd.Series( (df_hipass['RVmom']/H0), index=df_hipass.index)
 
-# Check conditions 
-if the_most_massive == 'True':
-    ascending_ = False
-    by_='logHI_mass_approx'
-    
-elif the_least_massive == 'True':    
-    ascending_ = True
-    by_='logHI_mass_approx'
-    
-elif the_confused == 'True':
-    ascending_ = False
-    by_='cf'
-
-else:
-    print("There is an error in selection of the dataset. Check what you selected.")
+# Check selected conditions and use parameters from the dictionary to sort/select correct sub-dataset
+ascending_ = select_dict[selected][0]
+by_ = select_dict[selected][1]
 
 # Create sorted (based on the dataset selected above) pandas dataframe
 df_selected = df_hipass.sort_index(by=by_, ascending = ascending_).reset_index() #Creating selected dataset and sorting
@@ -220,7 +215,7 @@ df_selected = df_selected[0:Number_of_sources] # Getting the specific number of 
 df = df_selected # Save new dataframe
 
 
-# In[8]:
+# In[24]:
 
 
 # Display the sorted dataframe head to see partial content
